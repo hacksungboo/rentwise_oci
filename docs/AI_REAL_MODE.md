@@ -58,7 +58,12 @@ SELECT status, COUNT(*), SUM(NVL(settled_usd, reserved_usd)) FROM rw_ai_ledger G
 
 ## 4. 비용
 
-- 모델 단가(A 기준): 입력 $0.20 / 캐시 $0.02 / 출력 $1.20 per 1M 토큰. 호출 1회 실제 약 $0.0005~0.001, 예약 상한 $0.0044, 최대 2회 시도.
+- 기존 등록 단가 정책: `PRICE_VERSION=openai-standard-2026-10-16`, 입력 $0.20 / 캐시 $0.02 / 출력 $1.20 per 1M 토큰. 이번 변경에서 가격표를 바꾸거나 실제 청구액을 측정하지 않았습니다.
+- `INPUT_LIMIT=16000`: 지시문·응답 schema·후보 목록·원문을 포함한 요청 전체 UTF-8 바이트 수 + 고정 여유256이 16,000 이하여야 합니다. 실제 토큰 개수를 뜻하지 않습니다. 원문2000자·기존 작업15개 제한은 유지합니다. 38곳(busy-v1)·120곳 대표 입력을 시험하며, 거래처 수 자체의 무조건 허용 한도는 아닙니다.
+- `OUTPUT_LIMIT=2000`, `PROMPT_VERSION=rental-extract-v1.1` 유지. 프롬프트/응답 schema/모델/단가를 바꾸지 않았으므로 PRICE/PROMPT 버전도 유지합니다.
+- 입력 바이트 상한을 보수적 토큰 상한으로 사용하는 기존 정책에 따라, **시도당 $0.0064**를 예약합니다: `(16000 × 1.25 × $0.20 + 2000 × $1.20) / 1,000,000`. 1.25배는 기존 캐시 쓰기 여유이고 출력에는 reasoning 등 전체 output usage가 포함됩니다. 실제 토큰·비용은 응답 usage로 정산합니다. 사용량을 모르는 시도는 예약을 유지합니다.
+- 최대2시도이므로 요청당 최대 예약 $0.0128, 240회×2시도이면 $3.072입니다(모든 시도를 상한으로 예약 유지하는 계산). 이전8000 정책은 같은 기준 $2.112였습니다. $6.14/$4.22는 이 조건의 산술 결과가 아닙니다. 이 수치가 운영 예산 설정을 자동으로 늘리지는 않습니다.
+- 구조·형식 토큰이 존재하므로 이 검사는 정확한 토큰 계수가 아닌 보수적 로컬 정책입니다. [OpenAI 토큰 계수 문서](https://developers.openai.com/api/docs/guides/token-counting)와 구분하며, 이번 수정은 토큰 계수 API나 유료 모델 호출을 추가하지 않습니다.
 - `AI_BUDGET_USD=3` 이면 최악 기준으로도 수백 회. 전체 지원금($50)과 별개로 서버가 이 한도에서 멈춥니다.
 - 테스트(pytest·CI)는 모델 대역을 쓰므로 유료 호출이 없습니다. 반복 점검은 `SMOKE_AI=0`.
 
@@ -73,3 +78,17 @@ SELECT status, COUNT(*), SUM(NVL(settled_usd, reserved_usd)) FROM rw_ai_ledger G
 | 회수 지연 (기존 PICKUP 일정 변경) | A v2 core: 회수 직원 재배정, 준비 이동, 다음 납품 같은 모델 대체, 예약·대여·의존 갱신 |
 | 기존 A/S 방문창 안 시각 변경, 직원 변경 | A v1 호환 엔진 |
 | 신규 납품·이동·장비 지정 변경 등 | 검토 필요(NEEDS_REVIEW)로 확정 차단 |
+
+
+## 7. TEL-055 입력 한도 회귀 재현 (무료)
+
+```bash
+cd app/backend
+python -m pytest -q tests/engine/test_input_limit.py
+# C가 제공한 운영 seed만 지정. gold/scenarios/사례 분류 파일은 읽지 않습니다.
+RENTWISE_BUSY_SEED=/absolute/path/to/seed_busy.json python -m pytest -q tests/engine/test_input_limit.py
+```
+
+환경변수를 지정하지 않으면 C seed HTTP 시험만 SKIPPED이고, 38/120곳·경계/초과·예약 시험은 항상 실행됩니다. busy 통합 시험은 격리 SQLite, 실제 B 비용원장/사람 확인/계획/확정 코드를 쓰고 모델만 FakeClient로 대체합니다. 실제 OpenAI 의미 정확도·청구액·운영 Oracle 결과로 확대하지 않습니다.
+
+B 후속 검토: 후보를 보낸 거래처 + 원문 이름/약칭의 결정적 검색 결과로 좁히면 입력 크기와 지시문 주입 표면을 줄일 수 있습니다. 이 변경은 B services/DB를 수정하지 않습니다. 후보 축소 시 중복 이름·모호함을 숨기거나 선택된 출처 거래처를 누락하지 않도록 별도 검증해야 합니다.

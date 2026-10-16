@@ -64,5 +64,20 @@ B가 엔진에 넘기는 값:
 ## 아직 안 한 것 (우선순위 낮음)
 
 - S4 장비 상세 화면(API 는 `GET /assets/{id}` 있음), S5 직원 현장 완료 기록(ExecutionEvent)
-- 비용 원장(AiUsage)·BudgetPort 저장 구현 → A 실제 모델 연동 시점에
+- 영속 비용원장·BudgetPort는 현재 B에 구현되어 있음. 운영 Oracle/동시성 인수는 별도
 - 계획 수정(PATCH)·재계산, 동시 확정 부하 시험, 백업 복구 리허설
+
+## 당일 실행 상태 보호 — TEL-054
+
+A `engine/execution.py`를 native v1/신규 납품과 B가 호출하는 v2 core의 검증에 공통 적용한다. 실행된 작업 불변, 과거 미시작 상태 확인, 신규·변경 출발의 현재시각/직원 이동, 진행 직원·장비 재사용 금지를 검사한다. `RealEngine.validate`도 매번 clock을 읽으며 공개 DTO/서명은 유지한다. B 이벤트 저장/UI는 미구현이고 실행 상태·물리 상태·revision의 원자 갱신, 일반/v2 양쪽 실제 clock 연결이 필요하다. 상세 정책·보수적 한계·인수 절차: [A_INTRADAY_CONNECTION.md](handoffs/A_INTRADAY_CONNECTION.md).
+
+### 신규 납품 — B v1 opt-in (TEL-053)
+
+`engine/delivery.py`는 기존 CREATE DELIVERY1건/장비1대를 제한 탐색한다. 기존 v1 NormalizedOperation의 extra 필드에 B가 allocation(Job/Rental/Reservation/Dependency ID)과 확인한 return_policy를 넣고 hash를 계산해야 한다. RealEngine의 `delivery_enabled=True`에서 기존 SolverResult로 전체 후보와 예약 CREATE를 반환한다. 기본 동작은 그대로다.
+
+서버 내부 `prepare_delivery_confirmation(snapshot, operations, candidate_items, reservation_changes, *, request_id, input_hash)`는 최신 상태와 승인 조건으로 생성분을 다시 계산·검증한다. B는 초안에 신규 Job 표시 메타데이터만 저장하고 운영 생성은 하지 않으며, 기존 잠금/revision/멱등 confirm에서 Job/Rental/예약/필요 의존과 계획 교체를 원자 저장한다. 이 연결은 아직 B production에 적용되지 않았다. 기본 2인자 validate는 신규 작업을 계속 거부한다. [연결과 인수 명세](handoffs/A_DELIVERY_CONNECTION.md).
+
+최신 main03e7913의 B 비용원장·회수 v2 bridge는 별도 경로로 유지한다. 신규 납품을 기존 `_apply_v2`로 보내지 않는다. 새로운 공용 타입/DB 스키마/외부 HTTP 필드/의존성은 없다.
+
+
+선택적 native v1 회수 adapter도 같은 RealEngine에 통합했다. 현재 B의 v2 회수 연결을 대체하거나 자동 활성화하지 않는다. [native 인계](handoffs/A_RECOVERY_CONNECTION.md). AI 한도/예약은 [실행 안내](AI_REAL_MODE.md#4-비용)를 따른다.

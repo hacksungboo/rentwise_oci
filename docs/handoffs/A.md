@@ -1,7 +1,31 @@
-# A 인수인계 — TEL-050: B 화면 호환 / OpenAI 해석
+# A 인수인계 — TEL-052~056 통합
 
-2026-10-16 · A/Codex · codex/a-ai-intent · TEL-049/050 Review · TEL-051 PR 제출
-B v1을 기본 연결 계약으로 사용한다. 독립 v2 core의 최초 커밋은 fa2cdeb이며 최신 동작은 PR #2 head를 기준으로 검토한다.
+2026-10-17 · A/Codex · feat/a-engine-updates · 기준 main9666202.
+
+## 현재 동작과 B 후속
+
+| 항목 | 현재 상태 | B 후속 |
+|---|---|---|
+| GPT 해석/영속 비용원장 | 기존 B 연결 유지; 전체 bytes+256 ≤16000, 예약 $0.0064/시도 | 후보 거래처 축소는 후속 검토 |
+| 웹 회수 지연 | 기존 B v2 bridge/core/확정 경로 유지 | 운영 시계·실행 상태/revision 연결 |
+| native B v1 회수 adapter | 선택적 recovery_enabled, 순수 prepare_confirmation 제공 | 선택 시 별도 원자 저장 훅. 기존 웹에는 활성화 불필요 |
+| 신규 단일 납품 | 선택적 delivery_enabled, 신규 Job/Rental/예약/의존 생성분 준비 | 서버 ID/반납정책·화면 표시·원자 생성 연결 |
+| 당일 추가 요청 | 완료/진행/실패 고정, 지난 미시작 확인, 진행 직원/장비 보호, 확정 fresh clock | 직원/PREP 이벤트·실제 자원·revision 원자 갱신과 양 경로 실제 clock |
+
+연결 문서: [회수 native](A_RECOVERY_CONNECTION.md), [신규 납품](A_DELIVERY_CONNECTION.md), [당일 실행](A_INTRADAY_CONNECTION.md), [AI 입력/예약](../AI_REAL_MODE.md).
+현재 B 비용원장/v2 회수·개발 seed 수정은 이미 main에 있다. 아래 과거 '미연결/AS2 충돌/미커밋' 기록은 당시 상태이며 현재 통합 상태로 읽지 않는다.
+
+## TEL-056 통합 검증과 제출
+
+원본 dirty checkout3곳을 보존하고 최신 main에서 A 변경 전체를 통합했다. 회수/납품 Facade 및 내부 v1 검증 옵션을 결합했고 native 회수 prepare에도 fresh clock을 적용했다. 기본 flag는 false이며 B 서비스/DB/contracts/프런트/infra/C seed/gold를 수정하지 않았다. 현재 웹 회수 성공 경로와 native adapter 시험을 분리했다.
+
+PASS backend362개(190+56+66+37+13), C busy seed FakeClient 해석200→사람확인→계획READY→확정200, 실제 B LedgerBudget 최대 usage 예약=정산0.0064. 앞서 명시한 seed fingerprint/byte8272 동일. PASS frontend vue-tsc --noEmit / vite build36modules(기존 의존성/번들 Node 직접 실행; npm PATH 부재를 해결). 실행/배포/유료 API는 추가하지 않았다.
+
+재현: `cd app/backend && RENTWISE_BUSY_SEED=/absolute/path/to/seed_busy.json python -m pytest -q`. C 운영seed 미지정 CI에서는 busy 통합1개만 SKIPPED이며 나머지 회귀는 실행된다. 원격 scripts/check.sh는 없음, root bootstrap/69개 시험은 통합 앱362개와 별도다. Oracle/브라우저/직원 이벤트·동시성/배포는 SKIPPED.
+
+사용자가 밀린 변경 전체의 commit/push/PR을 승인했다. 코드 커밋7f8dcf0, 입력 한도 커밋b4145dd와 연결 문서를 feat/a-engine-updates로 제출한다. PR URL·CI 최종 상태는 이 채팅의 제출 결과와 GitHub Checks를 따른다. main 병합/배포는 하지 않는다.
+
+## 이전 작업 기록
 
 ## 연결 방법: B 코드 변경 없음
 
@@ -146,9 +170,9 @@ B는 총잔액·카테고리 한도·동일 키 멱등·정산 원자성을 영�
 이 경계를 없애기 위해 B 서비스/DB를 임의 수정하거나 메모리 원장을 운영용으로 대체하지 않았다.
 
 가격 버전 `openai-standard-2026-10-16`: Luna 1M tokens당 input $0.20 / cached $0.02 / output $1.20.
-cache-write 1.25배를 고려해 입력8000/출력2000 기준 **시도당 $0.0044 상한**을 먼저 예약한다.
+cache-write 1.25배를 고려해 입력16000/출력2000 기준 **시도당 $0.0064 상한**(TEL-055 갱신)을 먼저 예약한다.
 공용 Usage에는 cache_write_tokens가 없으므로 B 정산도 미캐시 입력을 1.25배로 잡으면 보수적 상한을 유지한다.
-원문2000자, JSON/스키마/프롬프트 전체 UTF-8 bytes+256 ≤8000의 보수적 입력 제한, 출력2000 tokens.
+원문2000자, JSON/스키마/프롬프트 전체 UTF-8 bytes+256 ≤16000의 보수적 입력 제한, 출력2000 tokens.
 이 byte 제한은 실제 tokenizer보다 먼저 거절할 수 있다. 동시 AI1은 프로세스 단위이며 다중 worker 전체 제한은 B 필요.
 HTTP timeout20초, 전체45초 내 재시도 판단, 일시429/5xx만 최대1회. 시간초과/스키마/거부/incomplete 자동 재시도 없음.
 usage 없는 시도가 있으면 최종 call.usage를 부분 합계로 꾸미지 않고 null로 둔다. 각 시도 정산은 원장에 남긴다.
@@ -238,3 +262,65 @@ API 원문 오류/키/stack trace를 결과에 싣지 않는다. B는 기존대�
 최신 main 기준 최종 검사와 CI 결과는 PR의 확인 방법/최신 Checks를 기준으로 확인한다. main 병합·배포는 요청하지 않았다.
 
 제출 전 최종 PASS: main1cd1186 기반 backend186개, frontend typecheck/build36modules, diff 공백/문서 링크/11파일 소유 범위 및 실제 API 키 불포함. 운영 연결 인수·실제 브라우저·Oracle와 추가 유료 호출은 실행하지 않았다.
+
+
+## TEL-052 — A 구현 완료 / B 연결 대기
+
+2026-10-17 · Review · `/private/tmp/rentwise-a-engine-20261016`의 `codex/a-pickup-recovery`.
+기준 main9ab0c25에서 작업했으며 commit/push/새 PR/배포는 실행하지 않았다.
+
+추가: engine/recovery.py (B v1 복구/순수 확정 변경분), compat.py opt-in, v1.py 제한된 내부 검증 옵션 및 SUPERSEDED 예약 이력 보존, tests/engine/test_recovery.py56개. 기본 facade와 독립 v2 core는 유지한다. README/ARCHITECTURE의 A 연결 설명과 TASKS를 갱신했다. B 서비스/공유 계약/schema/UI/registry/mock/infra/C 데이터는 변경하지 않았다.
+
+- PASS `cd app/backend && .venv/bin/python -m pytest -q`: **242개**, 기존186+신규56, 외부 anyio deprecation1.
+- PASS 실제 B HTTP 초안/비교 호환·기존 confirm422/운영 무저장, 참고 SQLite 저장 adapter로 전 변경분 커밋 후 새 엔진 VALID·가용 재조회, 예외 전체 롤백.
+- PASS JSON 왕복/새 인스턴스/B 발급 ID, 원래 장비 재사용 우선·대체 납품 시간 유지·미래 예약 차단·검토 예약/실행 작업/준비·이동·직원·고객 창·기한, 위조/범위 밖 시간·장비·예약 변경 차단, 시간/후보 상한 및 불완전 탐색 상태, 누락/중복 기반 계획·잘못된 실제 대여시각 차단.
+- NOT CONFIGURED remote `sh scripts/check.sh`: 파일 없음(exit127). 원본 작업공간 명령은 bootstrap/이전 A69개 PASS(원격242개와 별도).
+- SKIPPED frontend/infra 재빌드(변경 없음), 실제 브라우저·운영 Oracle/잠금·동시성·배포·새 유료 모델 호출. B 실제 confirm200 인수는 미완료.
+
+필수 B 연결은 [별도 문서](A_RECOVERY_CONNECTION.md)의 두 지점이다. 기존 AS/직원 경로·잠금/revision/감사/멱등 가드를 유지하고 복구 결과의 대여·예약·작업·의존 변경을 같은 confirm 트랜잭션에 저장한다. 생성 플래그만 켜면 기존 confirm422로 막히며, 기본 설정에서는 NEEDS_REVIEW로 안전하게 유지한다. 원본 AS2/E1 휴식 충돌은 시험에서 명시 E2 override로 분리했다. C seed 검수/화면 override 동선과 AI 비용원장 연결은 B/C 후속이다.
+
+## TEL-053 — 신규 단일 납품 자동 배정
+
+작업 위치 `/private/tmp/rentwise-a-delivery-20261017`, 별도 Git worktree. 원래 `/private/tmp/rentwise-a-engine-20261016`의 TEL-052 미커밋 회수 복구 파일은 보존했다. 이 브랜치는 최신 B 회수 bridge를 사용하는 기준 위에 신규 납품만 추가한다. 두 checkout의 미커밋 내용이 자동 병합된 것은 아니다.
+
+추가 구현: engine/delivery.py, compat.py opt-in/prepare_delivery_confirmation, v1.py의 제한된 내부 new_jobs 검증 옵션, tests/engine/test_delivery.py66개. README/ARCHITECTURE의 A 설명·TASKS와 별도 [B 연결 문서](A_DELIVERY_CONNECTION.md)를 갱신했다. B production/공유 계약/DB schema/프런트/infra/C 데이터는 변경하지 않았다. 의존성 추가·새 유료 호출·commit/push/PR/배포·다른 채팅 전송 없음.
+
+정상 예: PR-A1대/C-S15:00~15:15/기한17:00 → P02/E1, 14:40 창고 출발~15:35 복귀. 기존 약속·실제 물리/대여 상태는 보존하고, B 발급 ID로 Job·PLANNED Rental·무기한 예약을 생성한다. 기존 PICKUP/PREP/release 연결이 있으면 조건부 장비도 준비 완료 뒤 사용할 수 있고 PREP→납품 의존을 생성한다. FIXED 대여 종료는 예정 반납값만 설정하며 회수/준비 없는 예약을 그 시각에 닫지 않는다. UNKNOWN 우선순위는 B와 같은 NORMAL 정책이다. B가 확인한 반납 정책/서버 allocation이 없으면 빈 후보로 차단한다.
+
+계산은 최대1000후보/2초 cooperative, 방문5분 격자(명시 고정시각 보존), 신규1건/개체1대, 명시 직원 override≤3이다. 기존 업무 시간·개체는 변경하지 않는다. 새 회수/준비·다개체·복수 요청·직접 현장 간 경로 최적화는 범위 밖이다.
+
+검증:
+
+- PASS 기준 main03e7913 backend190개, 최종 backend **256개**(신규66 포함). 명령: `cd app/backend && /private/tmp/rentwise-a-engine-20261016/app/backend/.venv/bin/python -m pytest -q`. 기존 Python venv만 재사용하며 conftest는 새 worktree 소스를 import한다. 외부 anyio deprecation1.
+- PASS 순수 정상·선호 직원 휴식 대체·조건부 준비/반납·미래 예약·고객창·자격·FIXED/OPEN_ENDED·인도 시각, hash/버전/상한·고정/격자 시각·부분안 차단·직원 override, 위조 후보/delta/ID 충돌·상태/예약 변경 재검증.
+- PASS JSON 왕복/다른 엔진/B 발급 plan/행 ID, 기존 조건·입력 불변. 기본 생성자/2인자 validate는 신규 납품을 차단한다.
+- PASS 기존 B HTTP 초안201 READY·저장/조회(시험용 서버 ID/정책 binding 주입). 신규 kind/site가 아직null인 표시 한계와 미수정 confirm422/운영 무저장을 명시 검증했다. B 실제 연결 성공이 아니다.
+- PASS 참고 SQLite 저장 adapter(READY/조건부 각각): 전 생성분+기존 `_finish_confirm` 커밋→새 엔진 VALID/가용 재조회, Job 생성 직후 또는 finish 후 예외→전체 snapshot/workspace/request/audit 롤백. FK 검사 활성 상태에서 실행했다.
+- NOT CONFIGURED remote `sh scripts/check.sh`: 파일 없음(exit127). PASS 원본 root 같은 명령의 bootstrap/이전 A69개(새 앱256개와 별도).
+- SKIPPED frontend/infra 재빌드(해당 코드/외부 DTO/의존성 불변), 실제 브라우저/Oracle·운영 동시성·배포/새 유료 LLM 호출. 실제 B 웹 confirm200 및 C 독립 인수는 미완료다.
+
+B 후속: ①canonical hash 이전 allocation/확인 반납정책 주입+flag ②초안 prepare/표시용 Job 메타데이터·plan_view overlay ③최신 HUMAN 해석 일치 검사+기존 confirm 안의 순수 prepare/전 생성분 원자 저장. 구체적 SQL 변환·현재 UI의 반납 미정 한계·인수 시나리오는 연결 문서 참조. 기존 B의 GPT 비용원장과 회수 v2 경로는 그대로 두며 이 신규 기능을 `_apply_v2`로 보내면 안 된다.
+
+## TEL-054 — 당일 추가 요청의 실행 보호 (2026-10-17, Review)
+
+- 사용자: 직원별 실행 상태 갱신을 B가 추가한다고 가정하고, A에서 완료/진행 이력을 유지한 잔여 일정 계산을 보완. 실제 checkout `/private/tmp/rentwise-a-delivery-20261017`, `codex/a-new-delivery`, 기존 미커밋 TEL-053 보존. 별도 TEL-052 checkout 불변.
+- 새 `engine/execution.py`: 과거 ASSIGNED/UNASSIGNED 작업 확인, 고정 실행행 변경 금지, 새/변경 출발이 현재시각 이전이면 거부, 진행 직원 재배정 금지, 현재시각 이후 보수적 이동 검사. v1 RealEngine.validate도 매 호출 clock을 읽고 신규 납품 prepare와 B v2 core에 동일 보호를 적용. v1/v2 availability에서 진행 장비는 불가용으로 유지.
+- 공개 DTO/서명/스키마/B production/DB/UI/infra/C 데이터 변경 없음. 완료는 복귀 포함 전체 PlanItem 완료라는 전제다. 실제 완료 순서를 추측하지 않으며 실패 위치/미시작 확인 계약이 없는 경우 보수적 보류. 상세 요구/한계와 B 작업은 [A_INTRADAY_CONNECTION.md](A_INTRADAY_CONNECTION.md).
+- PASS 최종 backend `cd app/backend && /private/tmp/rentwise-a-engine-20261016/app/backend/.venv/bin/python -m pytest -q`: **290개**(기존256+신규34), 외부 anyio warning1. 새 test_execution은 frozen3상태×직원/시각/장비/누락, 오후 신규 배정과 이력/원본 불변, stale ASSIGNED/UTC/경계, 미래 AS 변경, 상태·clock 재검증, 진행 직원/장비 차단, 현재 이동/완료 순서, v2 신규·지연/확정/가용성을 검증한다.
+- PASS 기존 B AS(v1)·회수(v2) HTTP 초안 READY 후 SQLite Job을 IN_PROGRESS로 갱신하면 confirm422, 운영 snapshot/workspace/audit/초안 READY 보존. workspace revision을 의도적으로 증가시키지 않은 시험으로 A의 추가 방어를 확인했다. 실제 B 이벤트 API/현장 버튼 구현을 시험한 것은 아니다. 실제 B 연결에서는 이벤트도 revision 증가/동일 잠금이 필수다.
+- PASS root `sh scripts/check.sh` 구성·문서·셸+이전 A69개(앱290과 별도), diff 공백/변경17파일 소유·문서 링크·비밀값 패턴. NOT CONFIGURED 원격 동명 명령(파일 없음 exit127), backend lint/type/build 별도 명령. SKIPPED FE/infra 재빌드(소스 불변), 직원 이벤트 API/UI/Oracle 잠금·동시성/배포/유료 API 호출. 초기 기대값/fixture 실패를 수정했고 최종 전체 통과했다.
+- 최신 원격 main은 `96662027a45aa860542617e49cec6c35a3bb3d99`. 03e7913 이후 DR Terraform/CI/문서 추가만 있고 app은 동일하다. 기준 branch와 미커밋 파일을 보존했으며 main merge/commit/push/PR/메신저 전송은 하지 않았다.
+- 다음 B 작업: 작업 단위 출발/전체 완료/실패 및 PREP 실행 이벤트, 실제 Asset/Rental/예약 갱신과 revision의 원자 저장, registry와 회수 bridge의 단일 실제 clock, 확정 시 최신 대상 상태 확인. 신규 납품은 TEL-053의 생성/prepare 저장 연결도 별도로 필요하다. 남은 운영 인수는 B/C가 수행한다.
+
+## TEL-055 — busy-v1 AI 입력 한도·예약 정합성 (2026-10-17, Review)
+
+- 사용자 요청/범위: main03e7913 기준 C busy-v1 해석의 AI_INPUT_TOO_LARGE를 해결. 별도 checkout `/private/tmp/rentwise-a-input-limit-20261017`, branch `codex/a-ai-input-limit`; 기존 TEL-053/054와 TEL-052 작업은 각각의 checkout에 그대로 보존. B services/DB/공용 계약·C 데이터/gold/사례 분류를 수정하지 않았다. 이번 수정은 유료 API 호출을 하지 않았다.
+- 선택: `INPUT_LIMIT=16000`, `INPUT_FRAMING_HEADROOM=256`, `OUTPUT_LIMIT=2000`. 지시문/schema/후보/기존 작업/원문을 포함한 전체 body의 UTF-8 bytes+256을 검사한다. tokenizer 추정이나 새 API/의존성을 추가하지 않았다. 16000을 실제 입력 토큰 개수로 표현하지 않는다. 문장2000자/기존 작업15개 제한·초과 시 AI_INPUT_TOO_LARGE/모델 호출0·예약0은 유지한다. 거래처120곳은 대표 크기 시험이며 모든 길이·문맥 조합 보장이 아니다.
+- 예약: 기존 Decimal 계산식이 INPUT_LIMIT를 직접 사용하므로 상향과 동시에 `$0.0064/시도 = (16000×1.25×0.20 + 2000×1.20)/1,000,000`로 맞춰진다. 최대2시도 $0.0128; 240회×2시도 최대 예약은 **$3.072**, 이전8000 기준은 $2.112다. 요청에 적힌 $6.14/$4.22는 이 조건의 산술보다 두 배다. 이 계산은 기존 가격·byte≥token+framing의 보수 정책에 따른 예약액이며 실청구액/승인 예산의 변경이 아니다. usage 없는 시도는 예약을 유지하고 두 번째 시도도 별도 전액 예약해야 한다.
+- 버전: `PRICE_VERSION=openai-standard-2026-10-16`, `PROMPT_VERSION=rental-extract-v1.1` **유지**. 단가·실제 프롬프트·모델·응답 schema가 같으므로 버전을 임의 변경하지 않았다. 최신 실청구 단가를 이번에 재검증했다고 주장하지 않는다. 정확한 토큰 계수와 이 로컬 byte 정책의 차이는 [OpenAI 문서](https://developers.openai.com/api/docs/guides/token-counting) 및 [실행 안내](../AI_REAL_MODE.md)에 기록했다.
+- 새 A 시험13개: 합성 거래처38/120곳 입력을 후보 잘림 없이 전달, 전체 bytes 정확16000 허용/16001 차단, 한글 multibyte 초과, 입력16000·출력2000/캐시0·8000·16000의 예약≥정산식, 두 시도 각각6400µUSD·unknown 유지, 첫/둘째 예약 잔액 부족 시 호출 차단. 실제 B LedgerBudget(SQLite)에서도 최대 미캐시 usage의 reserved=settled=$0.0064를 검증했다.
+- C 통합은 운영용 `rental/fixtures/infra/seed_busy.json`만 `RENTWISE_BUSY_SEED` 환경변수로 읽었다. SHA256 `dcd72cff4e4f61e945ca632a9c4de8328ee324a296352135301f380d0a1c0817`, dataset rental-synth-busy-v1, 고객38/직원12/장비132. gold/scenarios/분류 파일을 읽거나 예상 출력을 가져오지 않았다. 요청은 사용자 문장을 사용했고 시험용 FakeClient 응답은 A 시험에서 명시 구성했다. 원본 seed의 바이트 불변을 검증했다.
+- 실제 B API·격리 SQLite·영속 비용원장: 해석200(AI metadata, 전체38곳, bytes+256=**8272**) → AI 단독 계산422 → 사람 종료/기한 확인 READY → 계획201 READY → 확정200 → 회수 E2/14시, 기존 납품 P02/정오 유지 재조회. 초안 전후 운영 snapshot 동일, 확정 이후 실제 Asset 상태 불변. 모델만 FakeClient이며 실제 OpenAI 의미 정확도·청구·Oracle/브라우저 인수가 아니다.
+- **PASS** 최종 `cd app/backend && RENTWISE_BUSY_SEED=/absolute/path/to/seed_busy.json /private/tmp/rentwise-a-engine-20261016/app/backend/.venv/bin/python -m pytest -q -rP`: **203개(기존190+신규13)**, 외부 anyio deprecation1. 새 source 경로의 conftest를 사용하고 과거 venv Python만 재사용했다. C seed를 주지 않는 CI에서는 새 통합1개만 SKIPPED이고 나머지 입력/예약 시험은 항상 실행된다.
+- **PASS** root `sh scripts/check.sh`: 구성/문서/셸+기존 A69개(위 앱203과 별도); `git diff --check`, B services/DB/contracts/fixtures diff0. **NOT CONFIGURED** 원격 동명 명령(파일 없음 exit127), backend 별도 lint/type/build. **SKIPPED** FE/infra 재빌드(해당 소스 불변), 실제 OpenAI 호출·운영 Oracle·브라우저·T17 측정. commit/push/PR/배포/다른 채팅 전송 없음.
+- B 참고: 발신 거래처+원문 이름/약칭 검색 결과로 후보를 줄이는 정책은 후속으로 검토한다. 출처 누락·동명이인·모호함을 숨기지 않는 검색 계약과 별도 시험이 필요하다. 이번 한도 수정에 B 코드 수정은 필요 없다.

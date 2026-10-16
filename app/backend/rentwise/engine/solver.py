@@ -15,10 +15,11 @@ from rentwise.contracts.v2.schema import ContractError, check_contract, timestam
 from rentwise.contracts.v2.serialization import solver_input_hash
 from rentwise.contracts.v2.types import SolverInput, SolverResult
 
+from . import execution
 from .common import FROZEN, check_references, interval, overlaps, route_fits
 from .validate import validate
 
-SOLVER_VERSION = "rental-solver-normal-delay-v1"
+SOLVER_VERSION = "rental-solver-normal-delay-v2"
 ASSET_EDGES = {"READY_DELIVERY", "PREPARATION_DEPENDENCY", "ASSET_READY"}
 INTERNAL_TABLES = ("jobs", "plan_items", "rentals", "reservations", "dependencies")
 EMPLOYEE_CODES = {"EMPLOYEE_BREAK", "EMPLOYEE_OVERLAP", "EMPLOYEE_TRAVEL_GAP", "SHIFT_RETURN", "OUTSIDE_SHIFT", "EMPLOYEE_SKILL"}
@@ -47,6 +48,9 @@ def solve(input: SolverInput) -> SolverResult:
         ix, travel = check_references(input["snapshot"])
         if solver_input_hash(input) != input["input_hash"]:
             raise ContractError(["input.input_hash"])
+        stale = execution.stale_jobs(input["snapshot"], input["snapshot"]["as_of"])
+        if stale:
+            raise _Review("EXECUTION_STATUS_REQUIRED", stale[0], {"job_ids": stale})
         search = _Search(input, ix, travel, result, started)
         proof = search.proof()
         if proof is not None:
