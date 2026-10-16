@@ -46,6 +46,8 @@ export const api = {
     call<RequestView>('PUT', `/requests/${id}/interpretation`, { expected_request_revision: rev, payload, acknowledged_paths }),
   createPlan: (request_id: string, interpretation_revision: number, base_state_revision: number) =>
     call<PlanView>('POST', '/plans', { request_id, interpretation_revision, base_state_revision }),
+  explainPlan: (p: PlanView) => call<PlanExplanationResult>('POST', `/plans/${p.id}/explanation`,
+    { expected_plan_revision: p.revision, base_state_revision: p.base_state_revision, input_hash: p.input_hash }),
   confirm: (planId: string, expected_plan_revision: number, base_state_revision: number) =>
     call<{ confirmed_plan_id: string; new_state_revision: number }>('POST', `/plans/${planId}/confirm`,
       { expected_plan_revision, base_state_revision }, { 'Idempotency-Key': key() }),
@@ -124,4 +126,13 @@ export interface PlanView {
     violations: { code: string; job_ids: string[] }[]; unresolved: { job_id: string | null; code: string; details: Record<string, unknown> }[]
     reservation_changes: { action: string; old_id: string | null }[]; inherited_paths: string[]
   }
+}
+
+
+export interface PlanExplanation {
+  plan_id: string; plan_revision: number; base_state_revision: number; input_hash: string; evidence_hash: string
+  source: 'AI' | 'SYSTEM'; paragraphs: string[]; preserved: string[]; notice: string
+}
+export interface PlanExplanationResult {
+  status: 'OK' | 'FALLBACK'; explanation: PlanExplanation; error_code: string | null
 }

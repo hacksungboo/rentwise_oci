@@ -81,3 +81,7 @@ A `engine/execution.py`를 native v1/신규 납품과 B가 호출하는 v2 core�
 
 
 선택적 native v1 회수 adapter도 같은 RealEngine에 통합했다. 현재 B의 v2 회수 연결을 대체하거나 자동 활성화하지 않는다. [native 인계](handoffs/A_RECOVERY_CONNECTION.md). AI 한도/예약은 [실행 안내](AI_REAL_MODE.md#4-비용)를 따른다.
+
+## 변경안 AI 설명 — TEL-057
+
+`PlanReview.vue` → `POST /plans/{id}/explanation`(ADMIN, revision/hash/state guard) → `services/explanations.py`가 저장된 plan_view를 읽고 DB 연결을 닫음 → A `OpenAIPlanExplainer`가 사실 ID의 순서만 Structured Outputs로 정리 → 서버가 검증된 한국어 문장 렌더 → 최신 상태/근거 재검사 → 화면 표시. 공용 EnginePort/계산 결과 DTO와 DB 스키마는 변경하지 않았다. AI 비용/기록만 기존 B LedgerBudget/ai_calls에 저장한다. 설명 실패는 SYSTEM 요약이며 기존 계획 생성/확정 흐름을 차단하지 않는다. 준비 시각의 영향 경로에서 시작을 완료로 표기하던 표시를 제거하고 RETURN_PREP를 한국어로 표시한다. 구체적 비용/운영/한계는 [실행 안내](AI_REAL_MODE.md#8-변경안-ai-설명-tel-057) 참조.
