@@ -68,11 +68,15 @@ SMOKE_PASSWORD=<admin 비밀번호> ./scripts/smoke.sh   # 실제 Oracle 로 시
 
 ## 5. 업데이트 / 롤백
 
+**평소에는 PR 을 main 에 병합하면 자동 배포됩니다** → [CICD.md](CICD.md)
+
+아래는 CD 를 쓸 수 없을 때의 비상용 수동 배포(서버에서 직접 빌드)입니다.
+
 ```bash
 cd ~/rentwise_oci/infra
 ./scripts/deploy.sh                  # main 최신
 ./scripts/deploy.sh 3f2a9c1          # 특정 커밋으로 고정 또는 롤백
-cat .deploy-history                  # 배포 이력 (시각, 커밋)
+cat .deploy-history                  # 배포 이력 (시각, 커밋, ghcr=CD 배포)
 ```
 
 **10-17 09:30 기능 동결 이후에는 커밋 SHA 를 지정해서만 배포**합니다.

@@ -59,7 +59,7 @@ B가 엔진에 넘기는 값:
 | 마이그레이션 | 순번 SQL + schema_version | 기동 시 `create_all` + `rw_schema_version` | 해커톤 일정. 스키마 변경 시 추가형으로만 |
 | seed 형식 | CSV/JSON 파일 묶음 | 단일 `seed.json` | 적재 단순화. C 정식 데이터 받으면 조정 |
 | DB 배치 | 단일 서버 | 같음 (team-4-1) | |
-| 이미지 | Actions → GHCR → SSH 배포 | 서버에서 직접 빌드 (`deploy.sh`) | 레지스트리 인증·QEMU 없이 빠르게. CI 는 테스트·빌드 검증만 |
+| 이미지 | Actions → GHCR → SSH 배포 | 같음 (ARM 러너 네이티브 빌드, 실패 시 자동 롤백). 비상용으로 서버 직접 빌드(`deploy.sh`) 유지 | |
 
 ## 아직 안 한 것 (우선순위 낮음)
 
