@@ -109,6 +109,35 @@ function toggle(path: string) {
   s.has(path) ? s.delete(path) : s.add(path)
   acked.value = s
 }
+// 확인 항목별 추천값 (사람이 눌러야만 채워짐)
+function suggestion(path: string): { label: string; apply: () => void } | null {
+  const [, idx, f] = path.split('.')
+  const op = draft.value?.operations[Number(idx)]
+  if (!op) return null
+  if (f === 'window_end' && op.window_start) {
+    const item = props.reference.items.find((it) => it.id === op.item_id)
+    const mins = item?.service_minutes_by_kind?.[op.kind] ?? 10
+    const v = new Date(new Date(op.window_start).getTime() + mins * 60_000).toISOString()
+    return { label: `시작 + 현장 ${mins}분 (${time(v)})`, apply: () => (op.window_end = toKst(v)) }
+  }
+  if (f === 'due_at' && op.window_start) {
+    const day = toLocalInput(op.window_start).slice(0, 10)
+    return { label: '당일 17:00', apply: () => (op.due_at = `${day}T17:00:00+09:00`) }
+  }
+  return null
+}
+function toKst(isoUtc: string) {
+  return fromLocalInput(toLocalInput(isoUtc))
+}
+function applySuggestion(path: string) {
+  const s = suggestion(path)
+  if (!s) return
+  s.apply()
+  const set = new Set(acked.value)
+  set.add(path)
+  acked.value = set
+}
+
 const ready = computed(() => confirmations.value.every((c) => acked.value.has(c.path) && filled(c.path)))
 
 async function plan() {
@@ -227,8 +256,10 @@ async function plan() {
           <span>
             <b>{{ CONFIRM_FIELD_LABEL[fieldOf(c.path)] ?? fieldOf(c.path) }}</b>
             {{ c.question }}
-            <small v-if="!filled(c.path)">위 칸을 먼저 채워 주세요.</small>
+            <small v-if="!filled(c.path)">위 칸을 채우거나 추천값을 쓰세요.</small>
           </span>
+          <button v-if="suggestion(c.path) && !filled(c.path)" type="button" class="btn small suggest"
+                  @click.prevent="applySuggestion(c.path)">{{ suggestion(c.path)!.label }}</button>
         </label>
       </div>
 
@@ -244,7 +275,8 @@ async function plan() {
 </template>
 
 <style scoped>
-.panel { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-m); padding: 18px; display: grid; gap: 14px; align-content: start; }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-m); padding: 18px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; align-content: start; min-width: 0; }
+.panel :deep(input), .panel :deep(select), .panel :deep(textarea) { min-width: 0; max-width: 100%; }
 header p { color: var(--ink-3); font-size: 13.5px; margin-top: 2px; }
 header.row { display: flex; justify-content: space-between; align-items: start; gap: 10px; }
 .samples { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
@@ -254,16 +286,19 @@ header.row { display: flex; justify-content: space-between; align-items: start; 
 mark { background: none; color: inherit; text-decoration: underline 3px var(--tag); text-underline-offset: 3px; font-weight: 600; }
 .op { display: grid; gap: 10px; }
 .op-head { display: flex; gap: 8px; align-items: center; }
-.grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 12px; }
+.grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 12px; }
+.grid > * { min-width: 0; }
+select { text-overflow: ellipsis; }
 .grid .full { grid-column: 1 / -1; }
 .field em { font-style: normal; font-size: 12px; color: #6b5200; }
 .checks { display: grid; gap: 8px; padding: 12px; border: 1px solid #f1d98a; background: #fffbea; border-radius: var(--radius-s); }
-.check { display: grid; grid-template-columns: 20px 1fr; gap: 8px; font-size: 13.5px; align-items: start; }
+.check { display: grid; grid-template-columns: 20px minmax(0, 1fr); gap: 4px 8px; font-size: 13.5px; align-items: start; }
+.check .suggest { grid-column: 2; justify-self: start; }
 .check input { margin-top: 3px; }
 .check b { font-weight: 600; margin-right: 4px; }
 .check small { display: block; color: var(--ink-3); }
 .check.done { color: var(--ink-3); }
 .actions { display: flex; justify-content: space-between; gap: 8px; }
-.actions .primary { flex: 1; height: 42px; }
+.actions .primary { flex: 1; min-width: 0; height: 42px; }
 @media (max-width: 520px) { .grid { grid-template-columns: 1fr; } }
 </style>

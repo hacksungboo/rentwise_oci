@@ -64,7 +64,7 @@ export interface Card {
 export interface Ghost { job_id: string; lane: string; start_at: string; end_at: string; kind: string }
 export interface Lane { id: string; name: string; shift: [string, string] | null; breaks: { start_at: string; end_at: string }[]; items: Card[] }
 export interface Asset { id: string; item_id: string; physical_state: string; location_id: string | null }
-export interface Item { id: string; category: string; model_name: string }
+export interface Item { id: string; category: string; model_name: string; service_minutes_by_kind?: Record<string, number>; prep_minutes?: number }
 export interface AvailWindow { item_id: string; ready_asset_ids: string[]; conditional_assets: { asset_id: string; expected_ready_at: string | null }[]; unavailable_asset_ids: string[] }
 export interface Ops {
   workspace: { state_revision: number; current_plan_id: string; dataset_version: string; clock_anchor: string; engine_mode: string }
