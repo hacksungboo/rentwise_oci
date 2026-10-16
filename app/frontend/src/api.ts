@@ -29,6 +29,7 @@ async function call<T>(method: string, path: string, body?: unknown, headers: Re
 }
 
 const key = () => (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random())
+export const requestKey = key
 
 export const api = {
   login: (username: string, password: string) => call<{ user: User }>('POST', '/sessions', { username, password }),
@@ -41,6 +42,17 @@ export const api = {
   reference: () => call<Reference>('GET', '/reference'),
   createRequest: (source_customer_id: string, text: string) =>
     call<RequestView>('POST', '/requests', { source_customer_id, text }, { 'Idempotency-Key': key() }),
+  createQueue: (items: QueueInput[], idem: string) =>
+    call<RequestQueue>('POST', '/request-queues', { items }, { 'Idempotency-Key': idem }),
+  latestQueue: () => call<{ queue: RequestQueue | null }>('GET', '/request-queues/latest'),
+  queue: (id: string) => call<RequestQueue>('GET', `/request-queues/${id}`),
+  queuedInterpret: (queueId: string, id: string, rev: number) =>
+    call<RequestView>('POST', `/request-queues/${queueId}/interpret`, { request_id: id, expected_request_revision: rev }),
+  queuedPlan: (queueId: string, request_id: string, interpretation_revision: number) =>
+    call<PlanView>('POST', `/request-queues/${queueId}/plan`, { request_id, interpretation_revision }),
+  queuedHold: (queueId: string, request_id: string, reason: string) =>
+    call<RequestQueue>('POST', `/request-queues/${queueId}/hold`, { request_id, reason }),
+  plan: (id: string) => call<PlanView>('GET', `/plans/${id}`),
   interpret: (id: string, rev: number) => call<RequestView>('POST', `/requests/${id}/interpret`, { expected_request_revision: rev }),
   saveInterpretation: (id: string, rev: number, payload: Intent, acknowledged_paths: string[]) =>
     call<RequestView>('PUT', `/requests/${id}/interpretation`, { expected_request_revision: rev, payload, acknowledged_paths }),
@@ -114,6 +126,12 @@ export interface RequestView {
   id: string; revision: number; status: string; text: string; source_customer_id: string | null; received_at: string
   interpretation: null | { revision: number; origin: 'AI' | 'MOCK' | 'HUMAN'; payload: Intent; acknowledged_paths: string[] }
   pending_confirmations?: string[]
+  plans?: { id: string; status: string }[]
+}
+export interface QueueInput { source_customer_id: string | null; text: string }
+export interface RequestQueue {
+  id: string; status: 'ACTIVE' | 'DONE'; created_at: string; current_request_id: string | null; state_revision: number
+  items: { position: number; state: string; request: RequestView; hold_reason: string | null }[]
 }
 export interface DiffSide { employee_id: string | null; employee_name: string | null; asset_ids: string[]; start_at: string; end_at: string; service_start_at: string | null; segments: Segment[] }
 export interface DiffRow { job_id: string; kind: string; site_id: string | null; site_name: string | null; changed: boolean; before: DiffSide | null; after: DiffSide | null; reason_codes: string[] }

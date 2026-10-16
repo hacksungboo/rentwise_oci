@@ -3,7 +3,7 @@ import { computed, ref, watch } from 'vue'
 import { api, ApiError, type PlanView, type PlanExplanationResult } from '../api'
 import { KIND_LABEL, REASON_LABEL, time } from '../format'
 
-const props = defineProps<{ plan: PlanView }>()
+const props = defineProps<{ plan: PlanView; cancelLabel?: string }>()
 const emit = defineEmits<{
   (e: 'confirmed', r: { confirmed_plan_id: string; new_state_revision: number }): void
   (e: 'held'): void
@@ -177,7 +177,7 @@ async function hold() {
     <div v-if="error" class="banner error">{{ error.message }} <small>{{ error.code }}</small></div>
 
     <div class="actions">
-      <button class="btn ghost" :disabled="!!busy" @click="emit('cancel')">다시 입력</button>
+      <button class="btn ghost" :disabled="!!busy" @click="emit('cancel')">{{ cancelLabel ?? '다시 입력' }}</button>
       <button class="btn" :disabled="!!busy || plan.status === 'HELD'" @click="hold">보류</button>
       <button class="btn confirm" :disabled="!readyToConfirm || !!busy" @click="confirm">
         {{ busy === 'confirm' ? '확정 중…' : '이 변경안으로 확정' }}

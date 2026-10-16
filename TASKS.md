@@ -162,3 +162,14 @@ TEL-057 제출: 사용자 commit/push/PR 지시에 따라 최신 origin/main8f22
 Owner Codex/A, branch docs/a-work-summary-20261017, main67b217c 기준 별도 checkout. 사용자 GitHub docs 게시 요청. 소유 docs/A_WORK_SUMMARY_2026-10-17.md, README 문서 링크, TASKS, docs/handoffs/A.md. TEL-052~057 완료/검증/병합과 B 연결 미완료를 구분하고 사용자 최신 결정(일정 생성·최적화 집중, TEL-058 실시간 갱신 보류)을 기록한다. 미완성 feat/b-work-execution은 기존 checkout에 보존하고 제출에서 제외한다. 문서 내용·링크·공백·변경 범위 검증 후 commit/push/main 대상 PR. 앱 소스 불변이므로 앱 pytest/빌드는 반복하지 않으며 기존 기능 증거를 인용한다. main 병합/배포는 수행하지 않는다.
 
 TEL-059 결과 — Review. 완료 보고서 및 README/A 인계 링크에 현재 상태를 기록했다. PASS 새 문서 상대링크/문서4파일 비밀값 패턴·git diff --check, root sh scripts/check.sh(bootstrap/문서/셸·기존A69). SKIPPED 앱 pytest/프런트 빌드/브라우저·유료호출(이번 변경은 문서뿐), 원격rootcheck NOT CONFIGURED. 앞선 앱391/프런트/CI 증거는 실행 시점을 구분해 인용한다. 문서4파일만 commit/push/PR 제출하며 main 병합·배포는 하지 않는다.
+
+## TEL-062 — 3건 접수·순차 요청 대기열 (In Progress)
+
+Owner Codex(A/B), feat/b-request-queue, base main58b7eb5. 사용자 화면·API 구현 승인.
+Owned: api/routes, services/request_queue·requests·plans, db/tables·database, backup, frontend App/RequestPanel/RequestQueue/api, API tests, README/ARCHITECTURE/A 인계.
+계획: 최대3건 원자/멱등 접수 → FIFO 서버 검사 → 선두만 연결 없는 AI 해석(lease) → 사람확인/최신 일정 계산 → 기존 확정 또는 명시 보류 → 다음. DB 영속·새로고침 복원. 실패는 자동 재시도하지 않는다. 모델/budget/solver 제약과 C 자료/실시간 실행/infra는 불변.
+검증: FakeClient 3건 r7→8→9→10, 선행 유지/후행 차단, 실패·보류·재접속·동시 해석/멱등·stale 및 rollback, schema/reset/backup, backend pytest, configured frontend typecheck/build, browser QA; root check는 별도 저장소 명령. Oracle 실기동/유료 모델/배포는 별도 미검증. commit/push는 이번 요청 범위 밖.
+
+TEL-062 Review: 화면/API/DB영속FIFO 완료. backend415 PASS(391+신규24, FakeClient+busy운영seed), frontend typecheck/build39 PASS, 로컬IAB 3건확정 r7→10/두번째초안복원/재계산·보류 전환 PASS, OracleDDL/잠금컴파일 PASS(실기동 아님). root69/bootstrap은 별도. queue확정롤백/동시confirm1회·후행차단·해석lease/noDB모델대기·schema2/v1backup 회귀 포함. busy-v1 AS는 기존J-TRF1 VISIT_WINDOW로미해결임을 숨기지 않고 회수확정1/AS보류2로 검사. 실제유료모델/운영Oracle·다중서버/모바일/배포 SKIPPED. 상세 docs/REQUEST_QUEUE.md 및 A인계. no commit/push/PR.
+
+TEL-062 제출 승인(2026-10-17): 사용자가 commit/push/PR 요청. origin/main58b7eb5가 여전히 최신임을 fetch로 확인했다. 제출 전 동일 코드 backend415 PASS(15.83s/FakeClient+busy운영seed), frontend configured typecheck/build39 PASS, root69/bootstrap PASS 재검증. 대기열18파일만 feat/b-request-queue로 제출한다. 실제유료모델/Oracle·배포는 SKIPPED, B 소유 경로 리뷰 및 busy AS 기존제약은 PR에 명시. 앞선 미커밋/no-push 기록은 당시 상태다.

@@ -62,7 +62,7 @@ def summary(data: dict) -> dict:
 def restore_data(conn, data: dict) -> dict:
     if data.get("format") != FORMAT:
         raise SystemExit(f"알 수 없는 백업 형식: {data.get('format')}")
-    if data.get("schema_version") != T.SCHEMA_VERSION:
+    if data.get("schema_version") not in (1, T.SCHEMA_VERSION):
         raise SystemExit(f"스키마 버전 불일치: 백업 {data.get('schema_version')} / 현재 {T.SCHEMA_VERSION}")
     order = T.metadata.sorted_tables
     for t in reversed(order):
@@ -74,6 +74,9 @@ def restore_data(conn, data: dict) -> dict:
             cols = {c.name: c for c in t.columns}
             conn.execute(insert(t), [{k: _in(cols[k], v) for k, v in r.items() if k in cols} for r in rows])
         counts[t.name] = len(rows)
+    if data.get("schema_version") == 1:
+        conn.execute(insert(T.schema_version).values(version=T.SCHEMA_VERSION, applied_at=now(),
+                                                       note="v1 backup upgraded: empty request queues"))
     return counts
 
 

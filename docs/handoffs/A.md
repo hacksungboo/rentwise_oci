@@ -344,3 +344,17 @@ API는 plan_id/revision/hash/base/current state와READY를 모델 전후 확인�
 정리 완료: root `sh scripts/check.sh` PASS(기존 A69 포함, 앱390과 별도), 로컬 QA 서버 종료·임시 node_modules 링크 제거 확인. 최종 diff 공백 검사 PASS. feat/a-plan-explanation의 새 기능 변경은 미커밋 상태다.
 
 사용자 제출 승인 후 최신 main8f22d41(백업 기능 추가) 위로 rebase 완료, 충돌 없음. 동일 FakeClient/busy seed 전체 명령 **391 PASS**, frontend configured typecheck/build36modules PASS. 이번 제출은 feat/a-plan-explanation의 TEL-057 14파일만 포함하며 B 소유 경로를 PR에 명시해 리뷰를 요청한다. 기존 '미커밋' 기록은 당시 상태이며 이번 commit/push/PR 제출로 대체한다. main 병합/배포/유료 호출은 별도다.
+
+## TEL-062 — 3건 동시 접수·순차 처리 화면/API (Review)
+
+2026-10-17 · feat/b-request-queue · base main58b7eb5. 사용자 UI/API 전체 구현 승인. 기존 B 단일 요청·사람조건·계획·확정 API와 A 엔진을 재사용했다. 공용 rental 계약/모델·프롬프트/가격/예산/solver/infra/C 데이터 변경 없음. B 소유 api/services/db/frontend를 수정했으므로 PR 제출 시 B 리뷰 대상이다.
+
+- 구현: 최대3건 원자/멱등 접수, workspace 활성 묶음1개, DB 영속 FIFO, 선두만 해석/수정/계산/확정·보류. 기존 경로를 통한 후행 우회도409. 다음 계산은 잠금 안 최신 current_plan_id/revision/snapshot이며 별도 큐 API가 오래된 화면 revision을 받지 않는다. 기존 독립확정 검증/멱등·원자저장 유지. 새 사람조건 확인 후 옛 초안 확정도409.
+- 해석 lease120초를 짧게 저장하고 DB 연결을 닫은 뒤 기존 interpreter를 호출한다. 중복 호출은409, 저장된 해석의 재요청은 같은 결과/추가 호출0. 모델 반환 후 token/선두/revision 검사, 프로세스 소실 후 lease 만료 시 복구. 큐 자동재시도/worker 없음(기존 interpreter 내부 최대2시도는 유지). 실패 시 선두 유지, 직접입력/사유보류 가능. 페이지 재접속은 과금 없이 복원, 확정·보류 뒤 열린 화면이 다음 해석을 실행한다.
+- DB schema2: rw_request_queues/rw_request_queue_items 추가만, 기존 데이터/컬럼 보존. 기동 create_all+버전기록, reset/논리백업 포함, v1백업→빈큐/schema2 호환. SQLite에서도 workspace 쓰기 잠금을 먼저 획득. 새 env/의존성/배포 설정은 없다. 운영 적용은 별도.
+- PASS backend 전체 **415개**(기존391+큐24, FakeClient/격리SQLite, RENTWISE_BUSY_SEED 지정), 외부anyio deprecation1. B 개발seed 회수14시→AS1 10:15→AS2 다음날14:15 세번 확정 r7→8→9→10; 이전 직원/장비/시각/segments와 고객조건 보존, 초안무저장/실제Asset불변. 동시 접수멱등/확정1회, 실패·수동대체·보류·닫힌요청, 저장실패롤백, stale snapshot/사람조건, lease중복/만료·모델중DBconnection0, 권한, reset/backup/schema1upgrade 회귀 포함.
+- PASS frontend configured vue-tsc --noEmit / vite build39modules(기존의존성+번들Node), Oracle 새DDL·workspace FOR UPDATE 컴파일(실기동 아님), diff공백. 로컬 IAB/FakeClient에서3건접수→각확정→r10/선행회수·대체유지, 두번째초안중새로고침복원, 최종UI조건수정·재계산/변경안보류/해석단계사유보류→다음조건을 확인했다. 이미지 /private/tmp/rentwise-queue-qa/completed.png는 모델대역 시연이다.
+- 발견한 기존 한계: busy-v1의 회수확정은 r8로 유지되지만 뒤 AS 계산은 기존 v1 validator가 J-TRF1 VISIT_WINDOW를 반환하여 UNRESOLVED. 회귀는 이를 확정하지 않고 명시보류한 결과 **확정1/보류2**를 검증한다. seed/solver 의미는 이번 작업에서 수정하지 않았다. [상세 API·B 적용/재현](../REQUEST_QUEUE.md). 신규납품 B 연결도 기존 미완료 범위 그대로다.
+- SKIPPED 실제유료모델/Oracle·클라우드·다중서버/모바일 viewport/배포. backend 별도lint/type/build·이 저장소 scripts/check.sh NOT CONFIGURED. root 기존69/bootstrap check는 별도 저장소 검증이다. commit/push/PR/배포 없음. deferred 실행 기능checkout과 다른 작업은 보존했다.
+
+TEL-062 Git 제출 승인: 사용자가 대기열 변경의 commit/push/PR을 요청했다. origin/main58b7eb5 최신 확인(추가 변경/충돌 없음), 제출 전 backend415 PASS·frontend typecheck/build39 PASS·root69/bootstrap PASS 재실행. 대기열18파일만 제출하며 deferred 실행 기능/C자료/한도 측정 보고서·캡처는 이 commit에 포함하지 않는다. B 소유 API/services/DB/FE 및 schema2/기존busy AS 한계를 PR에 명시한다. 실제유료호출/Oracle 실기동/운영배포/병합은 별도다.
