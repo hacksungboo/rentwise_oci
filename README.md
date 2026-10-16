@@ -11,6 +11,7 @@
 
 | 문서 | 내용 |
 |---|---|
+| [docs/A_WORK_SUMMARY_2026-10-17.md](docs/A_WORK_SUMMARY_2026-10-17.md) | A 작업 완료 내역·현재 연결 상태·일정 생성/최적화 범위 |
 | [docs/INFRASTRUCTURE.md](docs/INFRASTRUCTURE.md) | **인프라 전체 설계**: 네트워크·DB 분리·CI/CD·백업 보안·도쿄 DR·모니터링 · [아키텍처 그림](docs/architecture/rentwise-oci.png) |
 | [docs/DEPLOY_GUIDE.md](docs/DEPLOY_GUIDE.md) | 서버 배포·점검·롤백 |
 | [docs/CICD.md](docs/CICD.md) | main 병합 시 자동 배포, Secrets 설정 |
