@@ -5,6 +5,7 @@ import InventoryStrip from './components/InventoryStrip.vue'
 import LoginView from './components/LoginView.vue'
 import PlanReview from './components/PlanReview.vue'
 import RequestPanel from './components/RequestPanel.vue'
+import RequestQueue from './components/RequestQueue.vue'
 import SystemPanel from './components/SystemPanel.vue'
 import TimelineBoard from './components/TimelineBoard.vue'
 import { addDays, dayLabel } from './format'
@@ -19,6 +20,11 @@ const date = ref<string | undefined>(undefined)
 const loadError = ref('')
 const toast = ref('')
 const panelKey = ref(0)
+const requestMode = ref<'single' | 'queue'>('queue')
+function changeMode(mode: 'single' | 'queue') {
+  plan.value = null
+  requestMode.value = mode
+}
 const showSystem = ref(false)
 let toastTimer: number | undefined
 
@@ -185,8 +191,16 @@ const isAdmin = computed(() => user.value?.role === 'ADMIN')
 
       <aside class="right">
         <template v-if="isAdmin">
-          <PlanReview v-if="plan" :plan="plan" @confirmed="onConfirmed" @held="onHeld" @cancel="onCancel" />
-          <RequestPanel v-else :key="panelKey" :reference="reference" :state-revision="ops.workspace.state_revision" @plan="(p) => (plan = p)" />
+          <nav class="request-modes" aria-label=" 요청 접수 방식">
+            <button class="btn" :class="{ primary: requestMode === 'queue' }" @click="changeMode('queue')">3건 순차 처리</button>
+            <button class="btn" :class="{ primary: requestMode === 'single' }" @click="changeMode('single')">단일 요청</button>
+          </nav>
+          <RequestQueue v-if="requestMode === 'queue'" :key="panelKey" :reference="reference" :state-revision="ops.workspace.state_revision"
+                        @preview="(p) => (plan = p)" @changed="load" />
+          <template v-else>
+            <PlanReview v-if="plan" :plan="plan" @confirmed="onConfirmed" @held="onHeld" @cancel="onCancel" />
+            <RequestPanel v-else :key="panelKey" :reference="reference" :state-revision="ops.workspace.state_revision" @plan="(p) => (plan = p)" />
+          </template>
         </template>
         <section v-else class="staff">
           <h2>{{ user.name }}님의 작업</h2>
@@ -221,6 +235,7 @@ const isAdmin = computed(() => user.value?.role === 'ADMIN')
 .board-head { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
 .board-head p { color: var(--ink-3); font-size: 13.5px; }
 .right { position: sticky; top: 70px; min-width: 0; }
+.request-modes { display: flex; gap: 8px; margin-bottom: 10px; }
 .staff { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-m); padding: 18px; display: grid; gap: 6px; }
 .staff p { color: var(--ink-2); font-size: 14px; }
 .cloud { border: 0; cursor: pointer; font: inherit; font-size: 12.5px; font-weight: 600; }

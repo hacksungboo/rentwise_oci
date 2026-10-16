@@ -47,3 +47,7 @@ cd infra && cp .env.example .env && vi .env && ./scripts/deploy.sh && ./scripts/
 선택적 native v1 회수 adapter도 함께 제공하지만, 현재 B 웹의 회수 지연은 기존 v2 bridge를 계속 사용합니다. [native adapter 인계](docs/handoffs/A_RECOVERY_CONNECTION.md). AI 입력 한도는 전체 UTF-8 bytes+256 ≤16000, 예약은 시도당 $0.0064입니다. [한도·예약 정책](docs/AI_REAL_MODE.md#4-비용).
 
 변경안 검토의 **AI 설명 보기**는 변경 시간·담당·장비와 유지되는 약속을 한 번에 정리합니다. 설명 실패 시 계산 결과 요약을 표시하며 기존 확정 흐름을 유지합니다. 기존 모델 키/영속 예산을 사용하고 별도 DB 변경은 없습니다. [설명 동작·비용](docs/AI_REAL_MODE.md#8-변경안-ai-설명-tel-057).
+
+### 3건 접수·순차 처리 (TEL-062)
+
+관리자 보드의 **3건 순차 처리**에서 거래처별 원문3개를 함께 접수합니다. 첫 요청을 해석·사람확인·확정/보류하면 다음 요청을 처리하며, 계산은 매번 최신 확정 일정에서 시작합니다. 접수와 진행은 DB에 저장되어 새로고침해도 복원됩니다. 실패는 해당 순서에서 멈추며 직접 입력/명시 보류가 가능합니다. 기존 **단일 요청** 화면도 유지합니다. [API·DB 업그레이드·검증·busy-v1 한계](docs/REQUEST_QUEUE.md).

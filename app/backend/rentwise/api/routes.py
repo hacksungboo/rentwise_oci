@@ -7,7 +7,7 @@ from typing import Any, Callable, Optional
 
 from fastapi import APIRouter, Depends, Header, Query, Response
 from pydantic import BaseModel, Field
-from sqlalchemy import insert, select, text
+from sqlalchemy import func, insert, select, text
 
 from rentwise.api.auth import User, current_user, login, logout, require_admin
 from rentwise.api.errors import ApiError, trace_id_var
@@ -19,6 +19,7 @@ from rentwise.services import operations as ops_svc
 from rentwise.services.cloud import cloud_info
 from rentwise.services import plans as plan_svc
 from rentwise.services import requests as req_svc
+from rentwise.services import request_queue as queue_svc
 from rentwise.services.plans import canonical_hash
 from rentwise.timeutil import now
 
@@ -35,13 +36,15 @@ def ro(fn: Callable):
         return fn(conn)
 
 
-def idempotent(scope: str, key: Optional[str], body: Any, fn: Callable):
+def idempotent(scope: str, key: Optional[str], body: Any, fn: Callable, *, serialize: bool = False):
     """같은 키+같은 body → 원래 응답, 같은 키+다른 body → 409. 키 없으면 그냥 실행."""
     if not key:
         return tx(fn)
     h = canonical_hash(body)
 
     def run(conn):
+        if serialize:
+            plan_svc._ws(conn, lock=True)
         row = conn.execute(select(T.idempotency).where((T.idempotency.c.scope == scope)
                                                        & (T.idempotency.c.idem_key == key))).first()
         if row:
@@ -68,7 +71,7 @@ def ready(response: Response):
     try:
         def q(c):
             c.execute(text("SELECT 1 FROM dual" if c.dialect.name == "oracle" else "SELECT 1"))
-            v = c.execute(select(T.schema_version.c.version)).scalar()
+            v = c.execute(select(func.max(T.schema_version.c.version))).scalar()
             return c.dialect.name, v
         dialect, ver = ro(q)
         return {"status": "ready", "db": dialect, "schema_version": ver,
@@ -205,6 +208,62 @@ def put_interpretation(request_id: str, body: InterpretationBody, user: User = D
 
 
 # --------------------------------------------------------------------------- 계획
+class QueueItemBody(BaseModel):
+    source_customer_id: Optional[str] = None
+    text: str = Field(min_length=1, max_length=2000)
+
+
+class QueueBody(BaseModel):
+    items: list[QueueItemBody] = Field(min_length=1, max_length=3)
+
+
+@router.post("/request-queues", status_code=201)
+def create_queue(body: QueueBody, user: User = Depends(require_admin),
+                 idem: Optional[str] = Header(None, alias="Idempotency-Key")):
+    return idempotent(f"{user.username}:POST:/request-queues", idem, body.model_dump(),
+                      lambda c: queue_svc.create(c, [i.model_dump() for i in body.items], user.username), serialize=True)
+
+
+@router.get("/request-queues/latest")
+def latest_queue(_: User = Depends(require_admin)):
+    return {"queue": ro(queue_svc.latest)}
+
+
+@router.get("/request-queues/{queue_id}")
+def get_queue(queue_id: str, _: User = Depends(require_admin)):
+    return ro(lambda c: queue_svc.view(c, queue_id))
+
+
+class QueueInterpretBody(BaseModel):
+    request_id: str
+    expected_request_revision: int = Field(ge=1)
+
+
+@router.post("/request-queues/{queue_id}/interpret")
+def interpret_queue(queue_id: str, body: QueueInterpretBody, _: User = Depends(require_admin)):
+    return queue_svc.interpret_current(queue_id, body.request_id, body.expected_request_revision)
+
+
+class QueuePlanBody(BaseModel):
+    request_id: str
+    interpretation_revision: int = Field(ge=1)
+
+
+@router.post("/request-queues/{queue_id}/plan", status_code=201)
+def plan_queue(queue_id: str, body: QueuePlanBody, user: User = Depends(require_admin)):
+    return tx(lambda c: queue_svc.create_plan(c, queue_id, body.request_id, body.interpretation_revision, user.username))
+
+
+class QueueHoldBody(BaseModel):
+    request_id: str
+    reason: str = Field(min_length=1, max_length=200)
+
+
+@router.post("/request-queues/{queue_id}/hold")
+def hold_queue(queue_id: str, body: QueueHoldBody, user: User = Depends(require_admin)):
+    return tx(lambda c: queue_svc.hold(c, queue_id, body.request_id, body.reason, user.username))
+
+
 class PlanBody(BaseModel):
     request_id: str
     interpretation_revision: int

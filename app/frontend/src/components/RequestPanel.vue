@@ -1,11 +1,15 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { api, ApiError, type Intent, type PlanView, type Reference, type RequestView } from '../api'
 import { CONFIRM_FIELD_LABEL, KIND_LABEL, addDays, fromLocalInput, time, toLocalInput } from '../format'
 import TimeField from './TimeField.vue'
 
-const props = defineProps<{ reference: Reference; stateRevision: number }>()
-const emit = defineEmits<{ (e: 'plan', p: PlanView): void }>()
+const props = defineProps<{ reference: Reference; stateRevision: number; existingRequest?: RequestView; queueId?: string }>()
+const emit = defineEmits<{
+  (e: 'plan', p: PlanView): void
+  (e: 'busy', value: boolean): void
+  (e: 'updated', value: RequestView): void
+}>()
 
 const SAMPLES = [
   { label: '회수 일정 변경', customer: 'C-H', text: '안녕하세요 한빛상사입니다. 오늘 프린터 회수를 오후 2시로 미뤄 주실 수 있을까요?' },
@@ -18,6 +22,7 @@ const req = ref<RequestView | null>(null)
 const draft = ref<Intent | null>(null)
 const acked = ref<Set<string>>(new Set())
 const busy = ref<'' | 'interpret' | 'plan'>('')
+watch(busy, (value) => emit('busy', !!value))
 const error = ref<{ message: string; code: string } | null>(null)
 
 const locName = computed(() => Object.fromEntries(props.reference.locations.map((l) => [l.id, l.name])))
@@ -36,6 +41,16 @@ function useSample(s: (typeof SAMPLES)[number]) {
 
 // AI 해석이 실패해도 시연·업무가 멈추지 않도록: 기존 작업을 골라 사람이 조건을 직접 입력
 const unsaved = ref<RequestView | null>(null)
+watch(() => props.existingRequest, (r) => {
+  if (!r) return
+  customer.value = r.source_customer_id ?? ''
+  text.value = r.text
+  req.value = r.interpretation ? r : null
+  unsaved.value = r.interpretation ? null : r
+  draft.value = r.interpretation ? JSON.parse(JSON.stringify(r.interpretation.payload)) : null
+  acked.value = new Set(r.interpretation?.acknowledged_paths ?? [])
+  error.value = null
+}, { immediate: true })
 const manualJob = ref('')
 const manualJobs = computed(() => {
   const loc = custLoc.value[customer.value]
@@ -50,8 +65,10 @@ async function interpret() {
     const created = unsaved.value && unsaved.value.text === text.value && unsaved.value.source_customer_id === customer.value
       ? unsaved.value : await api.createRequest(customer.value, text.value)
     unsaved.value = created
-    const r = await api.interpret(created.id, created.revision)
+    const r = props.queueId ? await api.queuedInterpret(props.queueId, created.id, created.revision)
+      : await api.interpret(created.id, created.revision)
     req.value = r
+    emit('updated', r)
     unsaved.value = null
     draft.value = JSON.parse(JSON.stringify(r.interpretation!.payload))
     acked.value = new Set()
@@ -155,6 +172,11 @@ function suggestion(path: string): { label: string; apply: () => void } | null {
     return { label: `시작 + 현장 ${mins}분 (${time(v)})`, apply: () => (op.window_end = toKst(v)) }
   }
   if (f === 'due_at' && op.window_start) {
+    const existing = props.reference.jobs.find((j) => j.id === op.target_job_id)
+    if (op.kind === 'AS' && existing?.due_at) {
+      const due = existing.due_at
+      return { label: `기존 완료 기한 (${time(due)})`, apply: () => (op.due_at = due) }
+    }
     const day = toLocalInput(op.window_start).slice(0, 10)
     return { label: '당일 17:00', apply: () => (op.due_at = `${day}T17:00:00+09:00`) }
   }
@@ -180,7 +202,9 @@ async function plan() {
   error.value = null
   try {
     const saved = await api.saveInterpretation(req.value.id, req.value.revision, draft.value, [...acked.value])
-    const p = await api.createPlan(saved.id, saved.interpretation!.revision, props.stateRevision)
+    emit('updated', saved)
+    const p = props.queueId ? await api.queuedPlan(props.queueId, saved.id, saved.interpretation!.revision)
+      : await api.createPlan(saved.id, saved.interpretation!.revision, props.stateRevision)
     req.value = saved
     emit('plan', p)
   } catch (e) {
@@ -196,25 +220,26 @@ async function plan() {
     <!-- 1. 요청 입력 -->
     <template v-if="!req">
       <header>
-        <h2>고객 요청 받기</h2>
-        <p>카톡·문자로 받은 내용을 그대로 붙여넣으세요.</p>
+        <h2>{{ queueId ? '이번 요청 처리' : '고객 요청 받기' }}</h2>
+        <p>{{ queueId ? '해석 실패 시 재시도하거나 기존 작업을 골라 직접 입력할 수 있습니다.' : '카톡·문자로 받은 내용을 그대로 붙여넣으세요.' }}</p>
       </header>
-      <div class="samples">
+      <div v-if="!queueId" class="samples">
         <span>예시</span>
         <button v-for="s in SAMPLES" :key="s.label" class="btn small" type="button" @click="useSample(s)">{{ s.label }}</button>
       </div>
       <label class="field">
         <span>보낸 거래처</span>
-        <select v-model="customer">
+        <select v-model="customer" :disabled="!!queueId">
+          <option v-if="queueId && !customer" value="">미지정</option>
           <option v-for="c in reference.customers" :key="c.id" :value="c.id">{{ c.name }}</option>
         </select>
       </label>
       <label class="field">
         <span>요청 내용</span>
-        <textarea v-model="text" maxlength="2000" placeholder="예: 오늘 프린터 회수를 오후 2시로 미뤄 주세요" />
+        <textarea v-model="text" :readonly="!!queueId" maxlength="2000" placeholder="예: 오늘 프린터 회수를 오후 2시로 미뤄 주세요" />
       </label>
       <div v-if="error" class="banner error">{{ error.message }} <small>{{ error.code }}</small></div>
-      <div v-if="canManual" class="manual">
+      <div v-if="canManual || (queueId && unsaved)" class="manual">
         <span>기존 작업을 골라 직접 입력</span>
         <select v-model="manualJob">
           <option value="" disabled>작업 선택</option>
@@ -304,7 +329,7 @@ async function plan() {
 
       <div v-if="error" class="banner error">{{ error.message }} <small>{{ error.code }}</small></div>
       <div class="actions">
-        <button class="btn ghost" @click="restart">다시 입력</button>
+        <button v-if="!queueId" class="btn ghost" :disabled="!!busy" @click="restart">다시 입력</button>
         <button class="btn primary" :disabled="!ready || !!busy" @click="plan">
           {{ busy === 'plan' ? '변경안 계산 중…' : '조건 확인하고 변경안 계산' }}
         </button>

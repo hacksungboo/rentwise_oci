@@ -58,8 +58,12 @@ def init_schema() -> None:
     eng = get_db_engine()
     T.metadata.create_all(eng)
     with eng.begin() as c:
-        if c.execute(select(T.schema_version.c.version)).first() is None:
+        version = c.execute(select(T.schema_version.c.version).order_by(T.schema_version.c.version.desc())).first()
+        if version is None:
             c.execute(insert(T.schema_version).values(version=T.SCHEMA_VERSION, applied_at=now(), note="initial"))
+        elif version.version < T.SCHEMA_VERSION:
+            c.execute(insert(T.schema_version).values(version=T.SCHEMA_VERSION, applied_at=now(),
+                                                       note="add request queues (existing data preserved)"))
 
 
 # --------------------------------------------------------------------------- seed
@@ -69,7 +73,7 @@ SEED_ORDER = [  # FK 순서. 삭제는 역순
     T.locations, T.customers, T.items, T.assets, T.rentals, T.reservations, T.employees, T.shifts,
     T.travel_times, T.jobs, T.dependencies, T.plans, T.plan_items,
 ]
-RUNTIME_TABLES = [T.audit_log, T.idempotency, T.interpretations, T.requests]
+RUNTIME_TABLES = [T.request_queue_items, T.request_queues, T.audit_log, T.idempotency, T.interpretations, T.requests]
 
 
 def load_seed(conn: Connection, seed: dict[str, Any]) -> None:

@@ -135,6 +135,23 @@ requests = Table(
     Column("created_by", String(64)),
 )
 
+request_queues = Table(
+    "rw_request_queues", metadata,
+    Column("id", ID(), primary_key=True),
+    Column("created_at", TS(), nullable=False),
+    Column("created_by", String(64), nullable=False),
+    Column("processing_token", ID()),
+    Column("processing_until", TS()),
+)
+
+request_queue_items = Table(
+    "rw_request_queue_items", metadata,
+    Column("queue_id", ID(), ForeignKey("rw_request_queues.id"), primary_key=True),
+    Column("position", Integer, primary_key=True),
+    Column("request_id", ID(), ForeignKey("rw_requests.id"), nullable=False, unique=True),
+    Column("hold_reason", String(200)),
+)
+
 interpretations = Table(
     "rw_interpretations", metadata,
     Column("id", ID(), primary_key=True),
@@ -281,4 +298,4 @@ ai_calls = Table(
     Column("created_at", TS(), nullable=False),
 )
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2

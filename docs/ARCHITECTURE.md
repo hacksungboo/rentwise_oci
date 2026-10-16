@@ -85,3 +85,7 @@ A `engine/execution.py`를 native v1/신규 납품과 B가 호출하는 v2 core�
 ## 변경안 AI 설명 — TEL-057
 
 `PlanReview.vue` → `POST /plans/{id}/explanation`(ADMIN, revision/hash/state guard) → `services/explanations.py`가 저장된 plan_view를 읽고 DB 연결을 닫음 → A `OpenAIPlanExplainer`가 사실 ID의 순서만 Structured Outputs로 정리 → 서버가 검증된 한국어 문장 렌더 → 최신 상태/근거 재검사 → 화면 표시. 공용 EnginePort/계산 결과 DTO와 DB 스키마는 변경하지 않았다. AI 비용/기록만 기존 B LedgerBudget/ai_calls에 저장한다. 설명 실패는 SYSTEM 요약이며 기존 계획 생성/확정 흐름을 차단하지 않는다. 준비 시각의 영향 경로에서 시작을 완료로 표기하던 표시를 제거하고 RETURN_PREP를 한국어로 표시한다. 구체적 비용/운영/한계는 [실행 안내](AI_REAL_MODE.md#8-변경안-ai-설명-tel-057) 참조.
+
+### 3건 순차 처리 대기열 (TEL-062)
+
+`RequestQueue.vue` → ADMIN `/request-queues` → `services/request_queue.py` → 기존 requests/사람확인/plans/confirm. schema2의 `rw_request_queues`와 `rw_request_queue_items`가 접수 순서·120초 해석 lease·보류 사유를 저장하고, 기존 request.status로 선두/완료를 결정한다. 모델 대기 중 DB 연결 없음; 완료 시 선두/token/revision 재검사. 모든 기존 관련 쓰기 경로에도 FIFO를 적용하며, 다음 계산은 workspace 잠금 아래 최신 snapshot을 사용한다. 확정 저장이 롤백되면 선두도 유지된다. SQLite는 쓰기잠금 획득, Oracle은 기존 FOR UPDATE. background worker는 없고 사람 확정·보류 후 열린 화면이 다음 해석을 호출한다. 상세 및 기존 busy-v1 AS 제한: [REQUEST_QUEUE.md](REQUEST_QUEUE.md).

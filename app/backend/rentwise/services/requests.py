@@ -91,6 +91,18 @@ def _existing_jobs_summary(conn: Connection, customer_id: str | None) -> list[di
 
 
 def interpret(conn: Connection, request_id: str, expected_request_revision: int) -> dict:
+    from rentwise.services.request_queue import guard_request
+    if guard_request(conn, request_id):
+        raise ApiError(409, "QUEUE_ENDPOINT_REQUIRED", "대기열의 순차 해석 API를 사용해 주세요.")
+    inp = interpretation_input(conn, request_id, expected_request_revision)
+    engine = get_engine()
+    result = engine.interpret(inp)
+    from rentwise.services.ai_ledger import record_call
+    record_call(request_id, engine.mode, result)
+    return store_interpretation(conn, request_id, result)
+
+
+def interpretation_input(conn: Connection, request_id: str, expected_request_revision: int) -> InterpretationInput:
     req = _req(conn, request_id)
     if req.revision != expected_request_revision:
         raise ApiError(409, "STALE_REQUEST", "요청이 변경되었습니다. 다시 불러와 주세요.",
@@ -99,15 +111,14 @@ def interpret(conn: Connection, request_id: str, expected_request_revision: int)
         raise ApiError(409, "REQUEST_CLOSED", "이미 확정되었거나 취소된 요청입니다.")
     cust = [CandidateRef(id=c.id, name=c.name) for c in conn.execute(select(T.customers.c.id, T.customers.c.name))]
     items = [CandidateRef(id=i.id, name=i.model_name) for i in conn.execute(select(T.items.c.id, T.items.c.model_name))]
-    inp = InterpretationInput(
+    return InterpretationInput(
         request_id=req.id, request_revision=req.revision,
         received_at=row_to_dict(T.requests, req)["received_at"], text=req.request_text,
         source_customer_id=req.source_customer_id, candidate_customers=cust, candidate_items=items,
         existing_jobs=_existing_jobs_summary(conn, req.source_customer_id))
-    engine = get_engine()
-    result = engine.interpret(inp)
-    from rentwise.services.ai_ledger import record_call
-    record_call(request_id, engine.mode, result)
+
+
+def store_interpretation(conn: Connection, request_id: str, result) -> dict:
     if result.status != "OK" or result.payload is None:
         err = result.error
         raise ApiError(502, (err.code if err else "AI_SCHEMA_INVALID"),
@@ -154,6 +165,8 @@ def _check_ids(conn: Connection, intent: Intent) -> None:
 
 def save_interpretation(conn: Connection, request_id: str, expected_request_revision: int,
                         payload: dict, acknowledged_paths: list[str], actor: str) -> dict:
+    from rentwise.services.request_queue import guard_request
+    guard_request(conn, request_id)
     req = _req(conn, request_id)
     if req.revision != expected_request_revision:
         raise ApiError(409, "STALE_REQUEST", "요청이 변경되었습니다. 다시 불러와 주세요.", retryable=True)

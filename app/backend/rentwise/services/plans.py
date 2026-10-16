@@ -37,6 +37,10 @@ def canonical_hash(obj: Any) -> str:
 
 
 def _ws(conn: Connection, lock: bool = False):
+    if lock and conn.dialect.name == "sqlite":
+        # SQLite has no SELECT FOR UPDATE. Acquire its write lock before reading the revision.
+        conn.execute(update(T.workspace_state).where(T.workspace_state.c.id == "DEMO")
+                     .values(state_revision=T.workspace_state.c.state_revision))
     q = select(T.workspace_state).where(T.workspace_state.c.id == "DEMO")
     if lock and conn.dialect.name != "sqlite":
         q = q.with_for_update()
@@ -74,6 +78,8 @@ def _normalize(conn: Connection, intent: dict, snapshot: dict) -> tuple[list[Nor
 
 def create_plan(conn: Connection, request_id: str, interpretation_revision: int, base_state_revision: int,
                 overrides: list[dict], actor: str) -> dict:
+    from rentwise.services.request_queue import guard_request
+    guard_request(conn, request_id)
     req = _req(conn, request_id)
     interp = latest_interpretation(conn, request_id)
     if interp is None or interp["revision"] != interpretation_revision:
@@ -230,6 +236,12 @@ def confirm(conn: Connection, plan_id: str, expected_plan_revision: int, base_st
             actor: str, trace_id: str) -> dict:
     ws = _ws(conn, lock=True)  # 모든 운영 쓰기 직렬화
     p = _plan(conn, plan_id)
+    from rentwise.services.request_queue import guard_request
+    if p.request_id and guard_request(conn, p.request_id):
+        latest = latest_interpretation(conn, p.request_id)
+        if latest is None or latest["revision"] != p.interpretation_revision:
+            raise ApiError(409, "STALE_INTERPRETATION", "조건 확인 내용이 바뀌었습니다. 변경안을 다시 계산해 주세요.",
+                           retryable=True)
     if p.status == "CONFIRMED":
         raise ApiError(409, "ALREADY_APPLIED", "이미 확정된 계획입니다.", {"plan_id": plan_id})
     if p.revision != expected_plan_revision:
@@ -358,6 +370,9 @@ def _finish_confirm(conn: Connection, ws, p, plan_id: str, actor: str, trace_id:
 def hold(conn: Connection, plan_id: str, expected_plan_revision: int, reason: str, actor: str) -> dict:
     _ws(conn, lock=True)
     p = _plan(conn, plan_id)
+    from rentwise.services.request_queue import guard_request, note_hold
+    if p.request_id:
+        guard_request(conn, p.request_id)
     if p.status in ("CONFIRMED", "SUPERSEDED"):
         raise ApiError(409, "PLAN_CLOSED", "이미 확정된 계획은 보류할 수 없습니다.")
     if p.revision != expected_plan_revision:
@@ -365,6 +380,7 @@ def hold(conn: Connection, plan_id: str, expected_plan_revision: int, reason: st
     conn.execute(update(T.plans).where(T.plans.c.id == plan_id).values(status="HELD"))
     if p.request_id:
         conn.execute(update(T.requests).where(T.requests.c.id == p.request_id).values(status="HELD"))
+        note_hold(conn, p.request_id, reason or "책임자 보류")
     conn.execute(insert(T.audit_log).values(id=uuid.uuid4().hex[:20], actor=actor, action=f"PLAN_HOLD:{reason[:40]}",
                                             entity_id=plan_id, occurred_at=now()))
     return {"plan_id": plan_id, "status": "HELD"}
