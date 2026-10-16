@@ -1,0 +1,111 @@
+// rentwise Alloy 수집기 (team-4-1, team-4-2 공통)
+//   메트릭: 호스트(node) · 컨테이너(cadvisor) · 서비스 응답(blackbox) → Prometheus remote write
+//   로그  : 모든 Docker 컨테이너 → Loki   (api 의 ai.interpret 줄은 ai_status 라벨 추가)
+// 환경변수: HOST_LABEL(team-4-1/team-4-2), MON_HOST(모니터링 서버 주소), PROBE_URL
+
+// ------------------------------------------------------------------ 보낼 곳
+prometheus.remote_write "mon" {
+  endpoint {
+    url = "http://" + sys.env("MON_HOST") + ":9090/api/v1/write"
+  }
+  external_labels = {
+    host = sys.env("HOST_LABEL"),
+  }
+}
+
+loki.write "mon" {
+  endpoint {
+    url = "http://" + sys.env("MON_HOST") + ":3100/loki/api/v1/push"
+  }
+  external_labels = {
+    host = sys.env("HOST_LABEL"),
+  }
+}
+
+// ------------------------------------------------------------------ 호스트 메트릭
+prometheus.exporter.unix "host" {
+  rootfs_path = "/rootfs"
+  sysfs_path  = "/sys"
+
+  filesystem {
+    mount_points_exclude = "^/(dev|proc|run|sys|boot|var/lib/docker/.+|var/lib/containers/.+)($|/)"
+    fs_types_exclude     = "^(autofs|binfmt_misc|bpf|cgroup2?|configfs|debugfs|devpts|devtmpfs|efivarfs|fusectl|hugetlbfs|iso9660|mqueue|nsfs|overlay|proc|procfs|pstore|rpc_pipefs|securityfs|selinuxfs|squashfs|sysfs|tmpfs|tracefs)$"
+  }
+}
+
+prometheus.scrape "host" {
+  targets         = prometheus.exporter.unix.host.targets
+  forward_to      = [prometheus.remote_write.mon.receiver]
+  scrape_interval = "30s"
+}
+
+// ------------------------------------------------------------------ 컨테이너 메트릭
+prometheus.exporter.cadvisor "containers" {
+  docker_host      = "unix:///var/run/docker.sock"
+  docker_only      = true
+  storage_duration = "5m"
+}
+
+prometheus.scrape "containers" {
+  targets         = prometheus.exporter.cadvisor.containers.targets
+  forward_to      = [prometheus.remote_write.mon.receiver]
+  scrape_interval = "30s"
+}
+
+// ------------------------------------------------------------------ 서비스 응답 (공개 주소 헬스체크)
+prometheus.exporter.blackbox "probe" {
+  config = "{ modules: { http_2xx: { prober: http, timeout: 5s } } }"
+
+  target {
+    name    = "rentwise"
+    address = sys.env("PROBE_URL")
+    module  = "http_2xx"
+  }
+}
+
+prometheus.scrape "probe" {
+  targets         = prometheus.exporter.blackbox.probe.targets
+  forward_to      = [prometheus.remote_write.mon.receiver]
+  scrape_interval = "30s"
+}
+
+// ------------------------------------------------------------------ 컨테이너 로그
+discovery.docker "containers" {
+  host = "unix:///var/run/docker.sock"
+}
+
+discovery.relabel "containers" {
+  targets = []
+
+  rule {
+    source_labels = ["__meta_docker_container_name"]
+    regex         = "/(.*)"
+    target_label  = "container"
+  }
+}
+
+loki.source.docker "containers" {
+  host          = "unix:///var/run/docker.sock"
+  targets       = discovery.docker.containers.targets
+  relabel_rules = discovery.relabel.containers.rules
+  forward_to    = [loki.process.app.receiver]
+}
+
+loki.process "app" {
+  // api 의 AI 해석 기록: "ai.interpret ... status=OK|ERROR code=..."
+  stage.match {
+    selector = "{container=\"rentwise-api\"} |= \"ai.interpret\""
+
+    stage.regex {
+      expression = "status=(?P<ai_status>[A-Z]+)"
+    }
+
+    stage.labels {
+      values = {
+        ai_status = "",
+      }
+    }
+  }
+
+  forward_to = [loki.write.mon.receiver]
+}

@@ -1,0 +1,102 @@
+# rentwise 모니터링 (Alloy → Prometheus·Loki → Grafana)
+#
+#   team-4-1 (10.0.0.198)  alloy ──사설망 push──┐
+#   team-4-2 (10.0.0.218)  alloy ──────────────┴─▶ prometheus :9090 (remote write) · loki :3100 ─▶ grafana :3000
+#
+# 프로필
+#   team-4-2: COMPOSE_PROFILES=server,agent   (수집·저장·화면 + 자기 서버 수집)
+#   team-4-1: COMPOSE_PROFILES=agent          (수집기만)
+# 모두 host 네트워크: Docker 포트 게시는 firewalld 를 우회하므로, 포트 제한은 firewall.sh 의 규칙으로만 한다.
+# 실행: cd infra/monitoring && cp .env.example .env && vi .env && docker compose up -d
+
+name: rentwise-mon
+
+x-logging: &logging
+  driver: json-file
+  options: { max-size: "10m", max-file: "3" }
+
+services:
+  prometheus:
+    profiles: [server]
+    image: prom/prometheus:v2.55.1
+    container_name: mon-prometheus
+    restart: unless-stopped
+    network_mode: host
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=${RETENTION:-3d}
+      - --web.listen-address=0.0.0.0:9090
+      - --web.enable-remote-write-receiver
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro,z
+      - prom-data:/prometheus
+    logging: *logging
+
+  loki:
+    profiles: [server]
+    image: grafana/loki:3.3.2
+    container_name: mon-loki
+    restart: unless-stopped
+    network_mode: host
+    command: -config.file=/etc/loki/loki.yml
+    volumes:
+      - ./loki/loki.yml:/etc/loki/loki.yml:ro,z
+      - loki-data:/loki
+    logging: *logging
+
+  grafana:
+    profiles: [server]
+    image: grafana/grafana:11.4.0
+    container_name: mon-grafana
+    restart: unless-stopped
+    network_mode: host
+    environment:
+      GF_SERVER_HTTP_PORT: "3000"
+      GF_SERVER_ROOT_URL: ${GRAFANA_ROOT_URL:-http://localhost:3000}
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:?GRAFANA_ADMIN_PASSWORD 를 .env 에 넣으세요}
+      GF_SECURITY_COOKIE_SECURE: ${GRAFANA_COOKIE_SECURE:-true}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_AUTH_ANONYMOUS_ENABLED: "false"
+      GF_ANALYTICS_REPORTING_ENABLED: "false"
+      GF_ANALYTICS_CHECK_FOR_UPDATES: "false"
+      GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH: /var/lib/grafana/dashboards/rentwise.json
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro,z
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro,z
+      - grafana-data:/var/lib/grafana
+    logging: *logging
+
+  alloy:
+    profiles: [agent]
+    image: grafana/alloy:v1.5.1
+    container_name: mon-alloy
+    restart: unless-stopped
+    network_mode: host
+    pid: host
+    privileged: true            # 호스트·컨테이너 메트릭(cadvisor) 수집용 읽기 전용 마운트 접근
+    command:
+      - run
+      - --server.http.listen-addr=127.0.0.1:12345
+      - --storage.path=/var/lib/alloy/data
+      - /etc/alloy/config.alloy
+    environment:
+      HOST_LABEL: ${HOST_LABEL:?HOST_LABEL 을 .env 에 넣으세요 (team-4-1 / team-4-2)}
+      MON_HOST: ${MON_HOST:-127.0.0.1}
+      PROBE_URL: ${PROBE_URL:-https://rentwise.ccmall.shop/api/v1/health/ready}
+    volumes:
+      - ./alloy/config.alloy:/etc/alloy/config.alloy:ro,z
+      - alloy-data:/var/lib/alloy/data
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /:/rootfs:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+      - /dev/disk/:/dev/disk:ro
+    logging: *logging
+
+volumes:
+  prom-data: {}
+  loki-data: {}
+  grafana-data: {}
+  alloy-data: {}

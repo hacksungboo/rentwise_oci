@@ -50,3 +50,25 @@ jobs:
       - run: terraform fmt -check
       - run: terraform init -backend=false
       - run: terraform validate
+
+  monitoring:
+    runs-on: ubuntu-latest
+    defaults: { run: { working-directory: infra/monitoring } }
+    steps:
+      - uses: actions/checkout@v4
+      - name: 모니터링 스택 기동·쿼리 시험
+        run: |
+          printf 'COMPOSE_PROFILES=server,agent\nHOST_LABEL=ci\nMON_HOST=127.0.0.1\nGRAFANA_ADMIN_PASSWORD=ci-test-pass\nGRAFANA_COOKIE_SECURE=false\nPROBE_URL=http://127.0.0.1:3000/api/health\n' > .env
+          docker compose config -q
+          docker compose up -d --quiet-pull
+          docker run -d --name rentwise-api alpine:3.20 sh -c 'while true; do echo "2026-10-17 00:00:00,000 INFO rentwise.ai ai.interpret request=REQ-1 mode=real model=m status=OK code=- attempts=1 tokens_in=1582 cached=0 tokens_out=219 latency_ms=3293 provider_id=x"; sleep 5; done'
+          docker run -d --name rentwise-web alpine:3.20 sh -c 'while true; do echo "10.0.0.1 - - [17/Oct/2026:00:00:00 +0000] \"GET /api/v1/version HTTP/1.1\" 200 120 \"-\" \"curl\""; sleep 5; done'
+          for i in $(seq 1 36); do
+            curl -fs localhost:9090/-/ready >/dev/null && curl -fs localhost:3100/ready >/dev/null && curl -fs localhost:3000/api/health >/dev/null && break
+            sleep 5
+          done
+          sleep 75
+          python3 ci_check.py ci || { docker compose logs --tail 60; exit 1; }
+      - name: 실패 시 로그
+        if: failure()
+        run: docker compose logs --tail 200
