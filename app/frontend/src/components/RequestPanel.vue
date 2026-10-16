@@ -34,13 +34,25 @@ function useSample(s: (typeof SAMPLES)[number]) {
   text.value = s.text
 }
 
+// AI 해석이 실패해도 시연·업무가 멈추지 않도록: 기존 작업을 골라 사람이 조건을 직접 입력
+const unsaved = ref<RequestView | null>(null)
+const manualJob = ref('')
+const manualJobs = computed(() => {
+  const loc = custLoc.value[customer.value]
+  return props.reference.jobs.filter((j) => j.kind !== 'PREP' && (j.from_id === loc || j.to_id === loc))
+})
+const canManual = computed(() => !!unsaved.value && !!error.value && error.value.code !== 'NETWORK')
+
 async function interpret() {
   busy.value = 'interpret'
   error.value = null
   try {
-    const created = await api.createRequest(customer.value, text.value)
+    const created = unsaved.value && unsaved.value.text === text.value && unsaved.value.source_customer_id === customer.value
+      ? unsaved.value : await api.createRequest(customer.value, text.value)
+    unsaved.value = created
     const r = await api.interpret(created.id, created.revision)
     req.value = r
+    unsaved.value = null
     draft.value = JSON.parse(JSON.stringify(r.interpretation!.payload))
     acked.value = new Set()
   } catch (e) {
@@ -48,6 +60,26 @@ async function interpret() {
   } finally {
     busy.value = ''
   }
+}
+
+function startManual() {
+  const job = props.reference.jobs.find((j) => j.id === manualJob.value)
+  if (!job || !unsaved.value) return
+  const ask = (f: string, q: string) => ({ path: `operations.0.${f}`, reason: 'MISSING', question: q })
+  draft.value = {
+    schema_version: 'rental.intent.v1',
+    operations: [{
+      operation: 'RESCHEDULE', kind: job.kind as 'DELIVERY' | 'PICKUP' | 'AS' | 'TRANSFER', target_job_id: job.id,
+      item_id: null, asset_ids: [], quantity: null, source_customer_id: customer.value, destination_customer_id: null,
+      window_start: null, window_end: null, due_at: null, rental_end_at: null, priority_hint: 'UNKNOWN', evidence: [],
+    }],
+    needs_confirmation: [ask('window_start', '바뀐 방문 시작 시각을 입력하세요.'),
+      ask('window_end', '방문 종료 시각을 입력하세요.'), ask('due_at', '완료 기한을 입력하세요.')],
+  }
+  req.value = unsaved.value
+  unsaved.value = null
+  acked.value = new Set()
+  error.value = null
 }
 
 function restart() {
@@ -182,6 +214,14 @@ async function plan() {
         <textarea v-model="text" maxlength="2000" placeholder="예: 오늘 프린터 회수를 오후 2시로 미뤄 주세요" />
       </label>
       <div v-if="error" class="banner error">{{ error.message }} <small>{{ error.code }}</small></div>
+      <div v-if="canManual" class="manual">
+        <span>기존 작업을 골라 직접 입력</span>
+        <select v-model="manualJob">
+          <option value="" disabled>작업 선택</option>
+          <option v-for="j in manualJobs" :key="j.id" :value="j.id">{{ KIND_LABEL[j.kind] }} · {{ j.id }} · {{ time(j.window_start) }}</option>
+        </select>
+        <button class="btn small" type="button" :disabled="!manualJob" @click="startManual">직접 입력</button>
+      </div>
       <button class="btn primary wide" :disabled="!text.trim() || !!busy" @click="interpret">
         {{ busy === 'interpret' ? '요청을 읽는 중…' : '요청 해석하기' }}
       </button>
@@ -278,6 +318,8 @@ async function plan() {
 .panel :deep(input), .panel :deep(select), .panel :deep(textarea) { min-width: 0; max-width: 100%; }
 header p { color: var(--ink-3); font-size: 13.5px; margin-top: 2px; }
 header.row { display: flex; justify-content: space-between; align-items: start; gap: 10px; }
+.manual { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; font-size: 13px; color: var(--ink-2); }
+.manual select { min-width: 0; flex: 1 1 160px; }
 .samples { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
 .samples > span { font-size: 13px; color: var(--ink-3); margin-right: 2px; }
 .wide { width: 100%; height: 42px; }

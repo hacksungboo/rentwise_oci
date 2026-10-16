@@ -36,6 +36,7 @@ export const api = {
   logout: () => call('DELETE', '/sessions/current'),
   version: () => call<VersionInfo>('GET', '/version'),
   system: () => call<SystemInfo>('GET', '/system'),
+  aiUsage: () => call<AiUsage>('GET', '/admin/ai'),
   operations: (date?: string) => call<Ops>('GET', '/operations' + (date ? `?date=${date}` : '')),
   reference: () => call<Reference>('GET', '/reference'),
   createRequest: (source_customer_id: string, text: string) =>
@@ -65,6 +66,12 @@ export interface SystemInfo {
     memory_gb?: number | null; private_ip?: string | null; uptime_s: number }
   db: { dialect?: string; banner?: string; pdb?: string; server_host?: string }
   build: { sha: string; image_tag: string; engine_mode: string; server_label: string }
+}
+export interface AiUsage {
+  engine_mode: string; model_id: string; limit_usd: number; settled_usd: number; committed_usd: number
+  calls: { ok: number; error: number }
+  recent: { at: string; request_id: string | null; status: string; error_code: string | null; attempts: number | null
+    input_tokens: number | null; output_tokens: number | null; latency_ms: number | null; provider_call_id: string | null }[]
 }
 export interface Segment { kind: 'TRAVEL' | 'SERVICE' | 'PREP'; from_id: string; to_id: string; start_at: string; end_at: string }
 export interface Card {

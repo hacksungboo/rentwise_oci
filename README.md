@@ -14,6 +14,7 @@
 | [docs/DEPLOY_GUIDE.md](docs/DEPLOY_GUIDE.md) | 서버 배포·점검·롤백 |
 | [docs/CICD.md](docs/CICD.md) | main 병합 시 자동 배포, Secrets 설정 |
 | [docs/DB_SPLIT.md](docs/DB_SPLIT.md) | DB 를 team-4-2 로 분리, 되돌리기 |
+| [docs/AI_REAL_MODE.md](docs/AI_REAL_MODE.md) | real 모드(GPT 해석 + A 엔진) 켜기·확인·AI 호출 기록·비용 |
 | [docs/CLOUDFLARE_TUNNEL.md](docs/CLOUDFLARE_TUNNEL.md) | 도메인 연결 |
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | 구조, API, A·C 연동 지점, 명세와 다른 부분 |
 | [docs/LOCAL_DEV.md](docs/LOCAL_DEV.md) | 로컬 실행 |
@@ -34,6 +35,4 @@ cd infra && cp .env.example .env && vi .env && ./scripts/deploy.sh && ./scripts/
 
 ## A 엔진 연결 상태
 
-기존 `ENGINE_MODE=real` 설정으로 `rentwise.engine.RealEngine()`을 사용한다. B 코드/DTO/DB 변경이나 추가 인자는 필요 없다. 기본 데모 시각은 기존 seed manifest의 clock_anchor다.
-
-현재 v1 자동 적용 범위는 기존 업무의 직원 변경과 기존 방문창 안 A/S 시간 조정이다. 회수 지연·장비 대체·신규 작업은 B 저장 범위를 넘어 NEEDS_REVIEW로 반환한다. 직접 호출용 v2 core의 정상/지연 기능은 별도로 유지한다. 자연어 모델은 아직 연결되지 않아 interpret는 AI_NOT_CONFIGURED 오류를 반환하며, 자동 mock 대체는 하지 않는다. 사람 확인 입력 경로로 계산·확정 시험을 완료했다. 상세: [A 인수인계](docs/handoffs/A.md).
+`ENGINE_MODE=real` 이면 GPT 해석(A) → 사람 확인 → 배정 계산(A) → 확정(B)으로 동작한다. 회수 지연은 A v2 core 를 B 가 직접 연결해 반납·준비·다음 납품(같은 모델 대체)까지 저장하고, 그 밖의 기존 작업 변경은 A v1 호환 엔진을 쓴다. 비용 장부·호출 기록·켜는 방법: [docs/AI_REAL_MODE.md](docs/AI_REAL_MODE.md), A 상세: [A 인수인계](docs/handoffs/A.md).
