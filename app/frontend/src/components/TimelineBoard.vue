@@ -1,9 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import type { Card, Lane } from '../api'
+import type { Card, Ghost, Lane } from '../api'
 import { KIND_LABEL, minuteOfDay, time } from '../format'
-
-export interface Ghost { job_id: string; lane: string; start_at: string; end_at: string; kind: string }
 
 const props = defineProps<{
   lanes: Lane[]

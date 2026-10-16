@@ -61,6 +61,7 @@ export interface Card {
   site_id: string | null; site_name: string | null; customer_id?: string | null
   window_start?: string | null; window_end?: string | null; due_at?: string | null; reason_codes: string[]
 }
+export interface Ghost { job_id: string; lane: string; start_at: string; end_at: string; kind: string }
 export interface Lane { id: string; name: string; shift: [string, string] | null; breaks: { start_at: string; end_at: string }[]; items: Card[] }
 export interface Asset { id: string; item_id: string; physical_state: string; location_id: string | null }
 export interface Item { id: string; category: string; model_name: string }

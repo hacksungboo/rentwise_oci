@@ -18,7 +18,7 @@ class Settings:
     session_secret: str = field(default_factory=lambda: _env("SESSION_SECRET", "dev-only-change-me"))
     cookie_secure: bool = field(default_factory=lambda: _env("COOKIE_SECURE", "false").lower() == "true")
     allowed_origins: tuple[str, ...] = field(default_factory=lambda: tuple(
-        o.strip() for o in _env("ALLOWED_ORIGINS", "http://localhost:5173,http://localhost:8080").split(",") if o.strip()))
+        o.strip() for o in _env("ALLOWED_ORIGINS", "http://localhost:5173,http://localhost:4173,http://localhost:8080,http://127.0.0.1:8080").split(",") if o.strip()))
     # 데모 계정: "아이디:비밀번호:역할:이름:직원ID" 를 ; 로 구분
     demo_accounts: str = field(default_factory=lambda: _env(
         "DEMO_ACCOUNTS",
