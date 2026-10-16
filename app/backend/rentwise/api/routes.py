@@ -16,6 +16,7 @@ from rentwise.db import tables as T
 from rentwise.db.database import get_db_engine, load_seed
 from rentwise.engine_registry import get_engine
 from rentwise.services import operations as ops_svc
+from rentwise.services.cloud import cloud_info
 from rentwise.services import plans as plan_svc
 from rentwise.services import requests as req_svc
 from rentwise.services.plans import canonical_hash
@@ -89,9 +90,29 @@ def version():
         db, banner = ro(q)
     except Exception:  # noqa: BLE001
         db, banner = None, None
+    c = cloud_info()
     return {"service": "rentwise-api", "build_sha": settings.build_sha, "image_tag": settings.image_tag,
             "engine_mode": get_engine().mode, "db": db, "db_banner": banner, "server": settings.server_label,
-            "bundle_version": "rental.bundle.v1"}
+            "bundle_version": "rental.bundle.v1",
+            "cloud": {k: c.get(k) for k in ("provider", "region", "display_name")}}
+
+
+@router.get("/system")
+def system(_: User = Depends(current_user)):
+    """시연용 실행 환경 정보: OCI 메타데이터 + DB + 배포 버전"""
+    def q(c):
+        if c.dialect.name != "oracle":
+            return {"dialect": c.dialect.name}
+        row = c.execute(text("SELECT banner_full, sys_context('USERENV','CON_NAME'), "
+                             "sys_context('USERENV','SERVER_HOST') FROM v$version")).first()
+        return {"dialect": "oracle", "banner": row[0], "pdb": row[1], "server_host": row[2]}
+    try:
+        db = ro(q)
+    except Exception as e:  # noqa: BLE001
+        db = {"error": type(e).__name__}
+    return {"cloud": cloud_info(), "db": db,
+            "build": {"sha": settings.build_sha, "image_tag": settings.image_tag, "engine_mode": get_engine().mode,
+                      "server_label": settings.server_label}}
 
 
 # --------------------------------------------------------------------------- sessions

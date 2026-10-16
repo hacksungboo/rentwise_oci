@@ -35,6 +35,7 @@ export const api = {
   me: () => call<{ user: User }>('GET', '/sessions/current'),
   logout: () => call('DELETE', '/sessions/current'),
   version: () => call<VersionInfo>('GET', '/version'),
+  system: () => call<SystemInfo>('GET', '/system'),
   operations: (date?: string) => call<Ops>('GET', '/operations' + (date ? `?date=${date}` : '')),
   reference: () => call<Reference>('GET', '/reference'),
   createRequest: (source_customer_id: string, text: string) =>
@@ -54,7 +55,17 @@ export const api = {
 
 // ------------------------------------------------------------------ 타입 (백엔드 계약과 같은 필드명)
 export interface User { username: string; role: 'ADMIN' | 'STAFF'; name: string; employee_id: string | null }
-export interface VersionInfo { build_sha: string; image_tag: string; engine_mode: string; db: string | null; db_banner: string | null; server: string }
+export interface VersionInfo {
+  build_sha: string; image_tag: string; engine_mode: string; db: string | null; db_banner: string | null; server: string
+  cloud?: { provider: string; region: string | null; display_name: string | null }
+}
+export interface SystemInfo {
+  cloud: { provider: string; region: string | null; availability_domain?: string | null; fault_domain?: string | null
+    display_name: string | null; instance_id?: string | null; shape?: string | null; ocpus?: number | null
+    memory_gb?: number | null; private_ip?: string | null; uptime_s: number }
+  db: { dialect?: string; banner?: string; pdb?: string; server_host?: string }
+  build: { sha: string; image_tag: string; engine_mode: string; server_label: string }
+}
 export interface Segment { kind: 'TRAVEL' | 'SERVICE' | 'PREP'; from_id: string; to_id: string; start_at: string; end_at: string }
 export interface Card {
   job_id: string; kind: string; asset_ids: string[]; start_at: string; end_at: string; segments: Segment[]

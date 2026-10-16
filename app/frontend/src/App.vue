@@ -5,6 +5,7 @@ import InventoryStrip from './components/InventoryStrip.vue'
 import LoginView from './components/LoginView.vue'
 import PlanReview from './components/PlanReview.vue'
 import RequestPanel from './components/RequestPanel.vue'
+import SystemPanel from './components/SystemPanel.vue'
 import TimelineBoard from './components/TimelineBoard.vue'
 import { addDays, dayLabel } from './format'
 
@@ -18,6 +19,7 @@ const date = ref<string | undefined>(undefined)
 const loadError = ref('')
 const toast = ref('')
 const panelKey = ref(0)
+const showSystem = ref(false)
 let toastTimer: number | undefined
 
 async function load() {
@@ -155,6 +157,10 @@ const isAdmin = computed(() => user.value?.role === 'ADMIN')
         <span class="badge num" title="확정할 때마다 1씩 오릅니다">상태 r{{ ops.workspace.state_revision }}</span>
         <span class="badge" :class="ops.workspace.engine_mode === 'real' ? 'ai' : 'mock'">{{ engineLabel }}</span>
         <span v-if="version?.db" class="badge" :title="version.db_banner ?? ''">{{ version.db === 'oracle' ? 'Oracle DB' : version.db }}</span>
+        <button v-if="version?.cloud" class="badge cloud" :class="version.cloud.provider" type="button" @click="showSystem = true"
+                title="실행 환경 보기">
+          <i />{{ version.cloud.provider === 'oci' ? `OCI ${version.cloud.region} · ${version.cloud.display_name}` : '로컬 실행' }}
+        </button>
       </div>
 
       <div class="who">
@@ -193,6 +199,8 @@ const isAdmin = computed(() => user.value?.role === 'ADMIN')
       빌드 {{ version.build_sha.slice(0, 7) }} · {{ version.image_tag }}<template v-if="version.server"> · {{ version.server }}</template>
     </footer>
 
+    <SystemPanel v-if="showSystem" @close="showSystem = false" />
+
     <Transition name="toast">
       <div v-if="toast" class="toast" role="status">{{ toast }}</div>
     </Transition>
@@ -215,6 +223,10 @@ const isAdmin = computed(() => user.value?.role === 'ADMIN')
 .right { position: sticky; top: 70px; min-width: 0; }
 .staff { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-m); padding: 18px; display: grid; gap: 6px; }
 .staff p { color: var(--ink-2); font-size: 14px; }
+.cloud { border: 0; cursor: pointer; font: inherit; font-size: 12.5px; font-weight: 600; }
+.cloud i { width: 8px; height: 8px; border-radius: 50%; background: var(--ink-3); display: inline-block; }
+.cloud.oci { background: #fbe9e6; color: #8a2a1c; }
+.cloud.oci i { background: #c74634; box-shadow: 0 0 0 3px rgba(199, 70, 52, .18); }
 .foot { padding: 8px 20px 16px; font-size: 12px; color: var(--ink-3); }
 .toast { position: fixed; left: 50%; bottom: 28px; transform: translateX(-50%); background: var(--ink); color: #fff; padding: 12px 18px; border-radius: var(--radius-s); font-size: 14.5px; box-shadow: 0 8px 24px rgba(24, 34, 58, .25); z-index: 50; }
 .toast-enter-active, .toast-leave-active { transition: opacity .2s, transform .2s; }
