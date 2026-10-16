@@ -45,6 +45,11 @@ class RealEngine:
     def interpret(self, inp: c.InterpretationInput) -> c.InterpretationResult:
         return prepare_review(inp, self.interpreter.interpret(inp))
 
+    def explain_plan(self, plan):
+        from .explain import OpenAIPlanExplainer
+        return OpenAIPlanExplainer(client=getattr(self.interpreter, 'client', None), budget=getattr(self.interpreter, 'budget', None),
+            model_id=getattr(self.interpreter, 'model_id', 'gpt-5.6-luna')).explain(plan)
+
     def solve(self, inp: c.SolverInput) -> c.SolverResult:
         try:
             clock = self._clock()

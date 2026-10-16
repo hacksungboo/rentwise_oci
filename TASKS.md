@@ -143,3 +143,16 @@ PASS 통합 backend362개=기준190+회수56+납품66+당일37+한도13(명시 C
 커밋: 7f8dcf0 feat(engine): support intraday rental planning; b4145dd fix(engine): raise AI input bound with safe reserve. 문서 커밋 후 feat/a-engine-updates를 push/main 대상 PR을 생성한다. 사용자 승인 범위는 commit/push/PR이며 main 병합/배포는 하지 않는다.
 
 TEL-056 제출 전 추가 PASS: root sh scripts/check.sh 구성/문서/셸+기존A69(앱362와 별도), C seed 미지정 조건에서 통합1개 SKIPPED 확인, diff/소유25파일·문서 링크·비밀값 패턴·원본 dirty파일checksum 동일. B production/공유 계약/프런트/infra/C diff0. 문서에는 과거 미연결 기록과 현재 B v2 회수/비용원장 연결을 구분했다.
+
+## TEL-057 — 변경안 AI 설명과 화면·API (In Progress)
+
+Owner Codex(A 통합), branch feat/a-plan-explanation, mainaa58564(PR13 병합). 사용자가 화면·API 연결까지 명시 승인하여 이번 task에 한해 engine/tests + B api/services/frontend 연결을 순차 통합한다. 기존 공용 contracts/DB schema/C 데이터/gold는 변경하지 않는다. plan-feature→implement-feature→verify-change.
+목표: 변경안 검토 상단에서 한 번 누르면 계산된 변경/이유/유지 약속을 한국어로 보여준다. AI는 서버가 검증·생성한 사실 ID의 중요도/순서만 정리하고 숫자/직원/시각·확정 여부를 지어내지 못하도록 서버가 문장을 렌더한다. 현재 변경안ID/revision/input_hash/state_revision에 묶고 계산/확정 상태를 변경하지 않는다. 준비 시작/완료는 실제 PREP segment에서 구분한다. 입력 원문/전체 고객목록은 보내지 않는다.
+순서: 순수 사실/기본 설명→기존 Responses transport/BudgetPort/동시lock를 재사용하는 선택적 AI 정리→DB연결을 닫은 후 호출/호출 후 최신상태 재검사/원장기록 API→버튼·로딩·기본설명/오류·늦은응답 무시 UI→FakeClient/SQLite/회귀·프런트검증/문서. 모델gpt-5.6-luna/기존가격·예산 유지, 출력1000/전체bytes+256≤16000, 1회시도 $0.0052예약. 실제 유료 호출/commit/push는 이번 작업에서 하지 않는다.
+수용: 14시회수→14:30준비시작/15시완료→P02정오납품유지를 근거대로 설명, 모델의 미확인ID/누락/중복·다른문장 차단, 실패도 기본설명/확정동선유지, 오래된/보류/확정안·권한검사·AI대기중새상태차단/운영무저장, 기존원장정산/unknown유지, 전체회귀/프런트type/build/화면QA. 실제 AI 의미정확도·Oracle동시성·배포는 미검증으로 구분한다.
+
+TEL-057 결과 — Review/구현·로컬 검증 완료. 사용자 명시 승인으로 engine + B API/services/frontend를 연결했다. 새 ADMIN POST /plans/{id}/explanation은 READY/revision/hash/state/근거를 검사하고 모델 대기 중 DB연결 없이 기존 영속 원장/기록을 사용한다. PlanReview 버튼·로딩·실패 SYSTEM요약·유지 약속·늦은응답 무시, 준비시각 오표시/RETURN_PREP 라벨/배지 줄바꿈을 정리했다. 공용 contracts/DB schema/C/infra 무변경.
+PASS 최종 `RENTWISE_BUSY_SEED=/absolute/path/to/seed_busy.json python -m pytest -q app/backend/tests`390개(기존362+새28: 엔진18/API10), 외부anyio경고1. PASS configured frontend vue-tsc --noEmit/vite build36modules(기존의존성/번들Node), git diff --check 및14파일 링크/공백/비밀값 패턴. 실제 B LedgerBudget 최대usage reserved=settled0.0052, 모델 대기 시 pool.checkedout0/운영snapshot·plans·workspace·audit 불변, stale/closed/권한·경쟁409/timeout후확정200 회귀 포함.
+PASS 로컬 IAB: 격리SQLite+FakeClient로 로그인→요청해석→사람확인→계산→AI설명보기. 준비14:30~15/대체P02/정오약속·김현우유지 표시, 캡처 /private/tmp/rentwise-plan-explanation.png. 유료 호출 없음. SKIPPED 실제 유료모델/운영Oracle·동시성/모바일viewport/배포. 원격scripts/check.sh 및backend별도lint/type/build는NOT CONFIGURED. commit/push/PR은이번기능에서수행하지않았다. 검증서버/임시의존성symlink는정리한다.
+
+TEL-057 제출: 사용자 commit/push/PR 지시에 따라 최신 origin/main8f22d41 위로 rebase 완료(충돌 없음). main의 백업 기능/시험1개를 포함한 전체 backend391 PASS, frontend typecheck/build36modules PASS. 기존390 시험에서 코드 변경 없이 최신 main 통합을 검증했다. root check PASS와 QA 증거 유지, 임시 의존성 링크 제거. feat/a-plan-explanation을 main 대상 PR로 제출하며 B 소유 API/service/test/frontend 경로의 리뷰 필요 사항을 본문에 명시한다. main 병합/배포/실제 유료 호출은 수행하지 않는다.

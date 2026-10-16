@@ -15,6 +15,7 @@ export const REASON_LABEL: Record<string, string> = {
   SAME_MODEL_SUBSTITUTE: '같은 모델 장비로 대체',
   PREPARATION_DEPENDENCY: '반납이 늦어져 창고 준비도 함께 이동',
   RETURN_TO_PREP: '반납 후 창고 준비',
+  RETURN_PREP: '반납 후 창고 준비',
   READY_DELIVERY: '준비 완료 후 납품',
   ASSET_REUSE: '같은 장비를 다음 납품에 사용',
   STAFF_REASSIGNED: '다른 직원으로 변경',

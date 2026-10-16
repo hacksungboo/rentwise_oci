@@ -43,3 +43,5 @@ cd infra && cp .env.example .env && vi .env && ./scripts/deploy.sh && ./scripts/
 당일 추가 요청의 A 실행 보호(TEL-054): 완료·진행 작업을 고정하고, 지난 미시작 작업은 상태 확인으로 차단합니다. B는 직원 실행 상태/운영 자원/revision 갱신과 v1·회수 v2 양쪽 실제 clock을 연결해야 합니다. [B 연결 안내](docs/handoffs/A_INTRADAY_CONNECTION.md).
 
 선택적 native v1 회수 adapter도 함께 제공하지만, 현재 B 웹의 회수 지연은 기존 v2 bridge를 계속 사용합니다. [native adapter 인계](docs/handoffs/A_RECOVERY_CONNECTION.md). AI 입력 한도는 전체 UTF-8 bytes+256 ≤16000, 예약은 시도당 $0.0064입니다. [한도·예약 정책](docs/AI_REAL_MODE.md#4-비용).
+
+변경안 검토의 **AI 설명 보기**는 변경 시간·담당·장비와 유지되는 약속을 한 번에 정리합니다. 설명 실패 시 계산 결과 요약을 표시하며 기존 확정 흐름을 유지합니다. 기존 모델 키/영속 예산을 사용하고 별도 DB 변경은 없습니다. [설명 동작·비용](docs/AI_REAL_MODE.md#8-변경안-ai-설명-tel-057).

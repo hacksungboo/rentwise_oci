@@ -324,3 +324,21 @@ B 후속: ①canonical hash 이전 allocation/확인 반납정책 주입+flag �
 - **PASS** 최종 `cd app/backend && RENTWISE_BUSY_SEED=/absolute/path/to/seed_busy.json /private/tmp/rentwise-a-engine-20261016/app/backend/.venv/bin/python -m pytest -q -rP`: **203개(기존190+신규13)**, 외부 anyio deprecation1. 새 source 경로의 conftest를 사용하고 과거 venv Python만 재사용했다. C seed를 주지 않는 CI에서는 새 통합1개만 SKIPPED이고 나머지 입력/예약 시험은 항상 실행된다.
 - **PASS** root `sh scripts/check.sh`: 구성/문서/셸+기존 A69개(위 앱203과 별도); `git diff --check`, B services/DB/contracts/fixtures diff0. **NOT CONFIGURED** 원격 동명 명령(파일 없음 exit127), backend 별도 lint/type/build. **SKIPPED** FE/infra 재빌드(해당 소스 불변), 실제 OpenAI 호출·운영 Oracle·브라우저·T17 측정. commit/push/PR/배포/다른 채팅 전송 없음.
 - B 참고: 발신 거래처+원문 이름/약칭 검색 결과로 후보를 줄이는 정책은 후속으로 검토한다. 출처 누락·동명이인·모호함을 숨기지 않는 검색 계약과 별도 시험이 필요하다. 이번 한도 수정에 B 코드 수정은 필요 없다.
+
+## TEL-057 — 변경안 AI 설명 화면·API
+
+2026-10-17 · feat/a-plan-explanation · base mainaa58564(PR13 병합). 사용자가 이번에는 화면·API까지 명시 승인하여 A engine와 B api/services/frontend를 단일 세션에서 순차 통합했다. 새 public 공용 계약/DB schema/의존성·C 데이터/gold 변경은 없다. commit/push/새 PR/배포는 이번 요청에 없어 하지 않았다.
+
+추가: engine/explain.py(순수 facts·서버 문장/프롬프트·budget), RealEngine.explain_plan, services/explanations.py(연결 없는 AI 대기/재검사/기록), ADMIN 설명 API, frontend api/타입·PlanReview 버튼/로딩/요약/오류/유지 약속. 모델은 기존 transport/공유 _ACTIVE_CALL/PRICES/영속 LedgerBudget을 재사용한다. AI는 확인된 fact ID를 정렬하며 서버가 숫자/시각/담당/장비·불변 notice를 렌더한다. 누락/중복/미확인ID/추가 자유문장 응답은 SYSTEM 요약으로 끝낸다.
+
+설명 입력은 현재안 facts만, 전체bytes+256≤16000/출력1000/1시도20초/예약0.0052, PROMPT=rental-plan-explain-v1.0, PRICE 기존 유지. PREP는실제segment시작14:30/완료15:00 구분, 납품 약속12시/담당 유지. 직원 변경의 구체 원인(예: 휴식)은 단순 reason code로 추론하지 않는다. 실제원장 최대usage 예약=정산0.0052 시험도 포함한다.
+
+API는 plan_id/revision/hash/base/current state와READY를 모델 전후 확인하고, 사실 내용도 fingerprint로 재비교한다. DB 연결/트랜잭션을 모델 대기 중 유지하지 않는다. 이 사이 확정/보류/상태변경은409, 권한없는호출401/403, timeout은200 FALLBACK(원장UNKNOWN유지) 후 기존확정200을 검증했다. 고객/직원 이름은자료이며 UI Vue보간으로 표시한다. 현재페이지 동일안 응답을재사용하고, props변경/늦은응답은버린다. 별도서버캐시없음.
+
+로컬 IAB 브라우저에서 격리 SQLite/FakeClient/실제 B HTTP를 사용해 로그인→원문해석→사람추천확인→변경안→AI설명보기까지 확인했다. 설명은 회수10→14/김현우→이서연, 준비10:30~11→14:30~15, P01준비완료15시로정오납품불가→P02대체, 정오약속/담당김현우유지를 표시했다. UI준비시각영향의잘못된'완료'문구/RETURN_PREP노출·배지줄바꿈도정리했다. 캡처 `/private/tmp/rentwise-plan-explanation.png`는모델대역시연이며실유료AI가아니다.
+
+최종시험결과는TASKS TEL-057을따른다. 실제유료모델응답정확도·운영Oracle·모바일viewport·배포는SKIPPED. API기록확정후 최신안확인과일반확정의기존잠금/검증은유지한다. 프런트는기존의존성/번들Node로configured타입/빌드검증, 검증서버는테스트용이다.
+
+정리 완료: root `sh scripts/check.sh` PASS(기존 A69 포함, 앱390과 별도), 로컬 QA 서버 종료·임시 node_modules 링크 제거 확인. 최종 diff 공백 검사 PASS. feat/a-plan-explanation의 새 기능 변경은 미커밋 상태다.
+
+사용자 제출 승인 후 최신 main8f22d41(백업 기능 추가) 위로 rebase 완료, 충돌 없음. 동일 FakeClient/busy seed 전체 명령 **391 PASS**, frontend configured typecheck/build36modules PASS. 이번 제출은 feat/a-plan-explanation의 TEL-057 14파일만 포함하며 B 소유 경로를 PR에 명시해 리뷰를 요청한다. 기존 '미커밋' 기록은 당시 상태이며 이번 commit/push/PR 제출로 대체한다. main 병합/배포/유료 호출은 별도다.

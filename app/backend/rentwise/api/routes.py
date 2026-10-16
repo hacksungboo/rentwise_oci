@@ -223,6 +223,19 @@ def get_plan(plan_id: str, _: User = Depends(current_user)):
     return ro(lambda c: plan_svc.plan_view(c, plan_id))
 
 
+class ExplanationBody(BaseModel):
+    expected_plan_revision: int = Field(ge=1)
+    base_state_revision: int = Field(ge=0)
+    input_hash: str = Field(min_length=1, max_length=80)
+
+
+@router.post("/plans/{plan_id}/explanation")
+def explain_plan(plan_id: str, body: ExplanationBody, _: User = Depends(require_admin)):
+    from rentwise.services.explanations import explain_plan as explain
+    # Explanation performs its own short reads; no tx()/ro() spans the AI call.
+    return explain(plan_id, body.expected_plan_revision, body.base_state_revision, body.input_hash)
+
+
 class ConfirmBody(BaseModel):
     expected_plan_revision: int
     base_state_revision: int

@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
-import { api, ApiError, type PlanView } from '../api'
+import { computed, ref, watch } from 'vue'
+import { api, ApiError, type PlanView, type PlanExplanationResult } from '../api'
 import { KIND_LABEL, REASON_LABEL, time } from '../format'
 
 const props = defineProps<{ plan: PlanView }>()
@@ -12,6 +12,42 @@ const emit = defineEmits<{
 
 const busy = ref<'' | 'confirm' | 'hold'>('')
 const error = ref<{ message: string; code: string } | null>(null)
+
+const explaining = ref(false)
+const explanation = ref<PlanExplanationResult | null>(null)
+const explanationError = ref('')
+let explanationRequest = 0
+const explanationKey = computed(() => [props.plan.id, props.plan.revision, props.plan.base_state_revision,
+  props.plan.current_state_revision, props.plan.input_hash, props.plan.status].join(':'))
+watch(explanationKey, () => {
+  explanationRequest++
+  explaining.value = false
+  explanation.value = null
+  explanationError.value = ''
+})
+async function explain() {
+  if (explaining.value || explanation.value || !readyToConfirm.value || busy.value) return
+  const key = explanationKey.value
+  const request = ++explanationRequest
+  const plan = props.plan
+  explaining.value = true
+  explanationError.value = ''
+  try {
+    const result = await api.explainPlan(plan)
+    if (request !== explanationRequest || key !== explanationKey.value) return
+    const e = result.explanation
+    if (e.plan_id !== plan.id || e.plan_revision !== plan.revision || e.base_state_revision !== plan.base_state_revision || e.input_hash !== plan.input_hash) {
+      explanationError.value = '최신 변경안의 설명을 다시 불러와 주세요.'
+      return
+    }
+    explanation.value = result
+  } catch (e) {
+    if (request === explanationRequest && key === explanationKey.value)
+      explanationError.value = e instanceof ApiError ? e.message : '설명을 불러오지 못했습니다. 아래 변경 내역을 확인해 주세요.'
+  } finally {
+    if (request === explanationRequest) explaining.value = false
+  }
+}
 
 const changed = computed(() => props.plan.diff.filter((d) => d.changed))
 const readyToConfirm = computed(() => props.plan.status === 'READY')
@@ -71,11 +107,35 @@ async function hold() {
       고정 규칙 계산기(AI 엔진 연동 전)로 만든 변경안입니다.
     </div>
 
+    <section class="explanation" aria-label="변경안 설명" :aria-busy="explaining">
+      <div class="explanation-head">
+        <div>
+          <h3>{{ explanation?.explanation.source === 'SYSTEM' ? '계산 결과 요약' : 'AI 변경 설명' }}</h3>
+          <p v-if="!explanation">변경 이유와 유지되는 약속을 한눈에 확인하세요.</p>
+        </div>
+        <button v-if="!explanation" class="btn explain-btn" :disabled="explaining || !readyToConfirm || !!busy" @click="explain">
+          {{ explaining ? '설명 정리 중…' : 'AI 설명 보기' }}
+        </button>
+      </div>
+      <div aria-live="polite">
+        <template v-if="explanation">
+          <p v-if="explanation.status === 'FALLBACK'" class="explanation-note">AI 설명을 불러오지 못해 계산 결과 요약을 표시합니다.</p>
+          <p v-for="(paragraph, i) in explanation.explanation.paragraphs" :key="'p' + i">{{ paragraph }}</p>
+          <div v-if="explanation.explanation.preserved.length" class="preserved">
+            <strong>유지되는 약속</strong>
+            <ul><li v-for="(item, i) in explanation.explanation.preserved" :key="i">{{ item }}</li></ul>
+          </div>
+          <p class="explanation-note">{{ explanation.explanation.notice }}</p>
+        </template>
+        <p v-if="explanationError" class="explanation-note">{{ explanationError }}</p>
+      </div>
+    </section>
+
     <ol v-if="plan.result.impact_edges?.length" class="chain">
       <li v-for="(e, i) in plan.result.impact_edges" :key="i">
         <span class="from">{{ label(e.from_job_id) }}</span>
         <span class="why">{{ REASON_LABEL[e.reason] ?? e.reason }}</span>
-        <span class="to">{{ label(e.to_job_id) }}<template v-if="e.new_time && e.old_time !== e.new_time"> ({{ time(e.old_time) }} 완료 → {{ time(e.new_time) }} 완료)</template></span>
+        <span class="to">{{ label(e.to_job_id) }}</span>
       </li>
     </ol>
 
@@ -138,8 +198,18 @@ async function hold() {
 </template>
 
 <style scoped>
+.explanation { background: color-mix(in srgb, var(--ok, #158558) 5%, var(--surface)); border: 1px solid var(--line); border-radius: var(--radius-s); padding: 12px; display: grid; gap: 10px; }
+.explanation-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 10px; }
+.explanation h3 { font-size: 14px; margin: 0; }
+.explanation p { font-size: 13.5px; line-height: 1.65; margin: 5px 0; overflow-wrap: anywhere; }
+.explanation .explanation-note { font-size: 12px; color: var(--ink-3); }
+.explain-btn { min-height: 36px; font-size: 13px; white-space: nowrap; }
+.preserved { margin-top: 10px; font-size: 13px; line-height: 1.65; }
+.preserved ul { margin: 4px 0 0; padding-left: 18px; }
+
 .panel { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-m); padding: 18px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; align-content: start; min-width: 0; }
 header p { color: var(--ink-3); font-size: 13.5px; margin-top: 2px; }
+header.row .badge { flex-shrink: 0; white-space: nowrap; }
 header.row { display: flex; justify-content: space-between; align-items: start; gap: 10px; }
 .chain { margin: 0; padding: 0; list-style: none; display: grid; gap: 0; counter-reset: c; }
 .chain li { position: relative; padding: 0 0 12px 22px; display: grid; gap: 1px; font-size: 13.5px; }
