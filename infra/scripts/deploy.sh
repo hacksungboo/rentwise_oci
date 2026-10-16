@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# team-4-1 에서 실행: 최신 main 을 받아 서버에서 직접(arm64 네이티브) 빌드하고 재기동한다.
+# [비상용] team-4-1 에서 실행: 최신 main 을 받아 서버에서 직접(arm64 네이티브) 빌드하고 재기동한다.
+# 평소에는 main 병합 시 CD(.github/workflows/cd.yml)가 GHCR 이미지로 자동 배포한다.
 #   ./scripts/deploy.sh            # origin/main 최신
 #   ./scripts/deploy.sh <commit>   # 특정 커밋으로 고정/롤백
 set -euo pipefail
@@ -25,7 +26,7 @@ echo "▶ API 준비 대기 (첫 DB 기동은 3~5분 걸릴 수 있음)"
 for i in $(seq 1 90); do
   if curl -fsS http://127.0.0.1:8080/api/v1/health/ready >/dev/null 2>&1; then
     echo "✓ 준비 완료"; curl -fsS http://127.0.0.1:8080/api/v1/version; echo
-    echo "$(date -Is) $SHA" >> .deploy-history
+    echo "$(date -Is) $SHA local" >> .deploy-history
     exit 0
   fi
   sleep 5

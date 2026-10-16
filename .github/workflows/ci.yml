@@ -2,8 +2,7 @@ name: ci
 
 on:
   pull_request:
-  push:
-    branches: [main]
+  workflow_call:   # cd.yml 이 배포 전에 같은 검사를 재사용
 
 permissions:
   contents: read

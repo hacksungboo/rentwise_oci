@@ -35,7 +35,7 @@ services:
       dockerfile: backend/Dockerfile
       args:
         BUILD_SHA: ${BUILD_SHA:-local}
-    image: rentwise-api:${IMAGE_TAG:-local}
+    image: ${API_IMAGE:-rentwise-api}:${IMAGE_TAG:-local}   # CD: ghcr.io/hacksungboo/rentwise-api:<sha>
     container_name: rentwise-api
     restart: unless-stopped
     depends_on:
@@ -59,7 +59,7 @@ services:
   web:
     build:
       context: ../app/frontend
-    image: rentwise-web:${IMAGE_TAG:-local}
+    image: ${WEB_IMAGE:-rentwise-web}:${IMAGE_TAG:-local}   # CD: ghcr.io/hacksungboo/rentwise-web:<sha>
     container_name: rentwise-web
     restart: unless-stopped
     depends_on: [api]
