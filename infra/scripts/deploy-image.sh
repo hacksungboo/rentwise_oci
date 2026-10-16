@@ -12,9 +12,19 @@ export API_IMAGE="ghcr.io/hacksungboo/rentwise-api"
 export WEB_IMAGE="ghcr.io/hacksungboo/rentwise-web"
 PREV="$(grep ' ghcr$' .deploy-history 2>/dev/null | tail -n1 | awk '{print $2}' || true)"
 
+# .env 에 배포 버전을 기록해, 이후 누가 docker compose 를 직접 실행해도 같은 이미지로 뜨게 한다
+pin_env() {
+  local k v
+  for kv in "IMAGE_TAG=$1" "BUILD_SHA=$1" "API_IMAGE=$API_IMAGE" "WEB_IMAGE=$WEB_IMAGE"; do
+    k="${kv%%=*}"; v="${kv#*=}"
+    if grep -q "^${k}=" .env; then sed -i "s|^${k}=.*|${k}=${v}|" .env; else echo "${k}=${v}" >> .env; fi
+  done
+}
+
 switch_to() {
   IMAGE_TAG="$1" BUILD_SHA="$1" docker compose pull --quiet api web
   IMAGE_TAG="$1" BUILD_SHA="$1" docker compose up -d --no-build
+  pin_env "$1"
 }
 
 wait_ready() {  # API 가 해당 SHA 로 응답하고 DB 까지 ready 인지

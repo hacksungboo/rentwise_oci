@@ -21,6 +21,11 @@ docker compose build --pull api web
 
 echo "▶ 기동"
 docker compose up -d
+# 이후 직접 compose 를 실행해도 이 빌드로 뜨도록 기록 (로컬 빌드 이미지)
+for kv in "IMAGE_TAG=$SHA" "BUILD_SHA=$SHA" "API_IMAGE=rentwise-api" "WEB_IMAGE=rentwise-web"; do
+  k="${kv%%=*}"; v="${kv#*=}"
+  if grep -q "^${k}=" .env; then sed -i "s|^${k}=.*|${k}=${v}|" .env; else echo "${k}=${v}" >> .env; fi
+done
 
 echo "▶ API 준비 대기 (첫 DB 기동은 3~5분 걸릴 수 있음)"
 for i in $(seq 1 90); do
