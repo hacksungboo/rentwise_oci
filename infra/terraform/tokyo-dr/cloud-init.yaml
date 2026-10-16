@@ -1,0 +1,10 @@
+#cloud-config
+# Oracle Linux 9 (aarch64): Docker + compose + git 설치, 저장소 클론
+runcmd:
+  - dnf install -y dnf-plugins-core git
+  - dnf config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
+  - dnf install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+  - systemctl enable --now docker
+  - usermod -aG docker opc
+  - sudo -u opc git clone ${repo_url} /home/opc/rentwise_oci
+  - touch /var/lib/rentwise-dr-ready

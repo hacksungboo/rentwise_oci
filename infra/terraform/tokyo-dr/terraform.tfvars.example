@@ -1,0 +1,6 @@
+# cp terraform.tfvars.example terraform.tfvars  (커밋 금지)
+tenancy_ocid     = "ocid1.tenancy.oc1..aaaa..."
+ssh_public_key   = "ssh-ed25519 AAAA... me@laptop"
+ssh_allowed_cidr = "203.0.113.10/32"   # curl ifconfig.me 결과 + /32
+# ocpus = 2
+# memory_gb = 12
