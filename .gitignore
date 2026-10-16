@@ -20,3 +20,12 @@ dist/
 .DS_Store
 .idea/
 .vscode/
+
+# terraform (state 에 사전 인증 URL 이 들어감 → 절대 커밋 금지)
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+!*.tfvars.example
+.terraform.lock.hcl
+crash.log

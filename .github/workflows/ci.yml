@@ -40,3 +40,13 @@ jobs:
           sed -i 's/^ORACLE_PASSWORD=.*/ORACLE_PASSWORD=x/; s/^DB_PASSWORD=.*/DB_PASSWORD=x/; s/^SESSION_SECRET=.*/SESSION_SECRET=x/; s/^CLOUDFLARE_TUNNEL_TOKEN=.*/CLOUDFLARE_TUNNEL_TOKEN=x/' .env
           docker compose config -q
       - run: bash -n infra/scripts/*.sh
+
+  terraform:
+    runs-on: ubuntu-latest
+    defaults: { run: { working-directory: infra/terraform/tokyo-dr } }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+      - run: terraform fmt -check
+      - run: terraform init -backend=false
+      - run: terraform validate
