@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# 앱 스키마 논리 백업 (Data Pump). 배포 전·리허설 후 실행. 같은 서버 백업은 DR 이 아님.
+# [단일 서버 모드용] 앱 스키마 논리 백업 (Data Pump). DB 분리형이면 team-4-2 의 infra/db-server/backup.sh 사용.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 source .env

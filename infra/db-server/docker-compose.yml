@@ -1,0 +1,34 @@
+# rentwise DB 서버 (team-4-2, 10.0.0.218, aarch64)
+#
+#   team-4-1 api ──(사설망 TCP 1521)──▶ team-4-2 Oracle Free
+#
+# host 네트워크를 쓰는 이유: Docker 의 포트 게시(-p)는 firewalld 규칙을 우회한다.
+# host 네트워크면 1521 이 호스트 프로세스처럼 열려 firewalld 의 "4-1 사설 IP 만 허용" 규칙이 그대로 적용된다.
+# 실행: cd infra/db-server && cp .env.example .env (4-1 과 같은 비밀번호) && docker compose up -d
+
+name: rentwise-db
+
+services:
+  db:
+    image: ${DB_IMAGE:-gvenzl/oracle-free:23-slim}
+    container_name: rentwise-db
+    restart: unless-stopped
+    network_mode: host
+    environment:
+      ORACLE_PASSWORD: ${ORACLE_PASSWORD:?ORACLE_PASSWORD를 .env에 넣으세요}
+      APP_USER: ${DB_USER:-rentwise}
+      APP_USER_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD를 .env에 넣으세요}
+    volumes:
+      - oracle-data:/opt/oracle/oradata
+    healthcheck:
+      test: ["CMD", "healthcheck.sh"]
+      interval: 15s
+      timeout: 10s
+      retries: 40
+      start_period: 180s
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }
+
+volumes:
+  oracle-data: {}
