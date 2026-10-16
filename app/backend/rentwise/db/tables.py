@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from sqlalchemy.dialects import oracle
 from sqlalchemy import (
-    Boolean, Column, DateTime, Float, ForeignKey, Integer, MetaData, String, Table, Text, UniqueConstraint,
+    Boolean, Numeric, Column, DateTime, Float, ForeignKey, Integer, MetaData, String, Table, Text, UniqueConstraint,
 )
 
 metadata = MetaData()
@@ -236,6 +236,49 @@ audit_log = Table(
     Column("new_revision", Integer),
     Column("occurred_at", TS(), nullable=False),
     Column("trace_id", String(64)),
+)
+
+# AI 비용 장부 (시연 초기화로 지우지 않음). 원문·연락처·키는 저장하지 않는다.
+ai_budget = Table(
+    "rw_ai_budget", metadata,
+    Column("id", String(20), primary_key=True),          # "AI" 한 행: 잠금·한도
+    Column("limit_usd", Numeric(12, 6), nullable=False),
+    Column("updated_at", TS(), nullable=False),
+)
+
+ai_ledger = Table(
+    "rw_ai_ledger", metadata,
+    Column("id", ID(), primary_key=True),                # reservation_id
+    Column("attempt_key", String(200), nullable=False, unique=True),
+    Column("status", String(20), nullable=False),        # RESERVED / SETTLED / UNKNOWN
+    Column("reserved_usd", Numeric(12, 6), nullable=False),
+    Column("settled_usd", Numeric(12, 6)),
+    Column("input_tokens", Integer),
+    Column("cached_input_tokens", Integer),
+    Column("output_tokens", Integer),
+    Column("price_version", String(60)),
+    Column("reason", String(60)),
+    Column("created_at", TS(), nullable=False),
+    Column("updated_at", TS(), nullable=False),
+)
+
+# AI 해석 호출 기록 (성공·실패 모두). 요청 처리가 롤백돼도 남도록 별도 트랜잭션으로 쓴다.
+ai_calls = Table(
+    "rw_ai_calls", metadata,
+    Column("id", ID(), primary_key=True),
+    Column("request_id", ID()),
+    Column("engine_mode", String(10), nullable=False),
+    Column("model_id", String(100)),
+    Column("prompt_version", String(60)),
+    Column("status", String(10), nullable=False),        # OK / ERROR
+    Column("error_code", String(60)),
+    Column("attempts", Integer),
+    Column("input_tokens", Integer),
+    Column("cached_input_tokens", Integer),
+    Column("output_tokens", Integer),
+    Column("latency_ms", Integer),
+    Column("provider_call_id", String(120)),
+    Column("created_at", TS(), nullable=False),
 )
 
 SCHEMA_VERSION = 1

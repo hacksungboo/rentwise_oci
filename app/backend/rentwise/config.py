@@ -30,6 +30,9 @@ class Settings:
     build_sha: str = field(default_factory=lambda: _env("BUILD_SHA", "local"))
     image_tag: str = field(default_factory=lambda: _env("IMAGE_TAG", "local"))
     server_label: str = field(default_factory=lambda: _env("SERVER_LABEL", ""))
+    # real 모드 AI 해석: 전체 사용 한도(USD). 0 이면 유료 호출을 막는다.
+    ai_budget_usd: str = field(default_factory=lambda: _env("AI_BUDGET_USD", "0"))
+    openai_model: str = field(default_factory=lambda: _env("OPENAI_MODEL", "gpt-5.6-luna"))
 
 
 settings = Settings()

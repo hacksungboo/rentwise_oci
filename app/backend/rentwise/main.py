@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import os
 from contextlib import asynccontextmanager
 from urllib.parse import urlparse
 
@@ -25,6 +26,11 @@ async def lifespan(_: FastAPI):
     init_schema()
     if settings.auto_seed and ensure_seeded():
         log.info("빈 DB에 seed 적재: %s", settings.seed_path)
+    from rentwise.services.ai_ledger import sync_limit
+    sync_limit()
+    if settings.engine_mode == "real":
+        log.info("ai: model=%s key=%s budget_usd=%s", settings.openai_model,
+                 "set" if os.environ.get("OPENAI_API_KEY", "").strip() else "MISSING", settings.ai_budget_usd)
     log.info("engine_mode=%s db=%s", settings.engine_mode, settings.database_url.split("@")[-1])
     yield
 
