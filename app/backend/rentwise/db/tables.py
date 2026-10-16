@@ -6,13 +6,15 @@
 """
 from __future__ import annotations
 
+from sqlalchemy.dialects import oracle
 from sqlalchemy import (
     Boolean, Column, DateTime, Float, ForeignKey, Integer, MetaData, String, Table, Text, UniqueConstraint,
 )
 
 metadata = MetaData()
 ID = lambda: String(64)  # noqa: E731
-TS = lambda: DateTime(timezone=False)  # noqa: E731  UTC 기준 (timeutil.to_db)
+# Oracle 의 기본 DateTime 매핑은 초 단위 DATE 라서 TIMESTAMP 로 지정
+TS = lambda: DateTime(timezone=False).with_variant(oracle.TIMESTAMP(), "oracle")  # noqa: E731  UTC 기준
 
 schema_version = Table(
     "rw_schema_version", metadata,
