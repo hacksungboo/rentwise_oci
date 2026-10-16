@@ -1,12 +1,13 @@
-"""A's deterministic v2 JSON core; no DB, network, or input mutation.
+"""A planning engines, with B's unchanged v1 RealEngine entry point.
 
-Import solve/validate/availability for v2 callers. B's v1 EnginePort and
-RealEngine registry integration remain pending; keep ENGINE_MODE=mock.
-See docs/handoffs/A.md before wiring the service's confirmation path.
+RealEngine uses B v1 DTOs and limits candidates to B's current write capability.
+Direct solve/validate/availability functions retain the independent v2 core API.
+See docs/handoffs/A.md for supported operations and remaining product limits.
 """
 
 from .availability import availability
 from .validate import validate
 from .solver import solve
+from .compat import RealEngine
 
-__all__ = ["availability", "validate", "solve"]
+__all__ = ["availability", "validate", "solve", "RealEngine"]

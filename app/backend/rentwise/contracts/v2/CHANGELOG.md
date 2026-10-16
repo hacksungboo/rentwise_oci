@@ -21,3 +21,9 @@
 - Rejects v1 bundle mixing. Intent v1 and result envelope v1 remain unchanged.
 - Initial shared files created in the user-authorized A startup session; B owns
   subsequent contract maintenance. B/C review and service integration are pending.
+
+## B v1 entry point — 2026-10-16, TEL-048
+
+- RealEngine uses the existing B v1 types without contract or version changes.
+- Direct v2 functions and schemas remain available for independent callers.
+- B v1 only emits candidates that its existing confirmation transaction can persist.

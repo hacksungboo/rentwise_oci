@@ -29,3 +29,9 @@ cd app/frontend && npm install && npm run dev      # http://localhost:5173  (adm
 # 서버 (team-4-1)
 cd infra && cp .env.example .env && vi .env && ./scripts/deploy.sh && ./scripts/check.sh
 ```
+
+## A 엔진 연결 상태
+
+기존 `ENGINE_MODE=real` 설정으로 `rentwise.engine.RealEngine()`을 사용한다. B 코드/DTO/DB 변경이나 추가 인자는 필요 없다. 기본 데모 시각은 기존 seed manifest의 clock_anchor다.
+
+현재 v1 자동 적용 범위는 기존 업무의 직원 변경과 기존 방문창 안 A/S 시간 조정이다. 회수 지연·장비 대체·신규 작업은 B 저장 범위를 넘어 NEEDS_REVIEW로 반환한다. 직접 호출용 v2 core의 정상/지연 기능은 별도로 유지한다. 자연어 모델은 아직 연결되지 않아 interpret는 AI_NOT_CONFIGURED 오류를 반환하며, 자동 mock 대체는 하지 않는다. 사람 확인 입력 경로로 계산·확정 시험을 완료했다. 상세: [A 인수인계](docs/handoffs/A.md).

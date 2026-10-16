@@ -1,6 +1,11 @@
 # A 엔진의 공용 v2 계약 (B 통합 검토 대기)
 
 기존 `rentwise.contracts.types`의 B v1 Pydantic DTO와 mock/API는 유지한다.
+
+TEL-048: B의 무인자 `RealEngine()`은 기존 v1 계약만 사용한다. B 변경이나 추가 context/DTO를 요구하지 않는다.
+직원 변경·기존 방문창 안 AS 시각 조정만 자동 적용하며 회수 지연/개체 대체/신규 작업은 확인필요다.
+아래 v2는 별도 직접 호출용 core이며 B v1의 계약을 대체하지 않는다.
+최신 연결 범위는 [A 인수인계](../../../../../docs/handoffs/A.md)를 따른다.
 A core는 `rentwise.contracts.v2`의 JSON dict 계약만 사용하며 v1 bundle을 거부한다.
 이 버전 경로는 공용 계약의 단일 정의이며 엔진 안에 DTO를 복제하지 않는다.
 B가 계약 변경을 병합하고 A·C가 의미를 확인해야 한다.
@@ -48,7 +53,7 @@ due_at은 인도 종료기한이다. Item.direct_transfer_allowed와 Job.direct_
 
 `rental.bundle.v2`, `rental.solver.v2`, `rental.solver-result.v2`를 사용한다.
 Snapshot은 `rental.snapshot.v2`와 state_revision/as_of/dataset_version/policy_version/travel_version/horizon_start/end,
-13개 엔티티 배열을 모두 포함한다. as_of는 B가 제공하며 A는 현재시각을 읽지 않는다.
+12개 엔티티 배열을 모두 포함한다. as_of는 B가 제공하며 A는 현재시각을 읽지 않는다.
 
 SolverInput은 request_id/request_revision/interpretation_revision, 새 plan_id/base_plan_id,
 base_state_revision, 버전/horizon, 정규화 operations, approved_job_ids, snapshot, overrides,
