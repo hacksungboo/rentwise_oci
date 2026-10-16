@@ -4,6 +4,36 @@
 |---|---|---|---|---|---|
 | TEL-046 | A / Codex | codex/a-engine | Review | app/backend/rentwise/engine/, app/backend/tests/engine/, docs/handoffs/A.md | 독립 v2 core 및 최초 PR 제출 |
 | TEL-048 | A / Codex | codex/a-engine | Review | engine/, tests/engine/, A 인수인계·작업 기록 | B v1 변경 없이 계산·확정·재조회, 지원 밖 작업 무저장 차단 |
+| TEL-049 | A / Codex | codex/a-ai-intent | Review | engine/, tests/engine/, A 인수인계·작업 기록 | OpenAI→intent v1, 근거/ID/날짜·모호함 검증, 예산/모델 오류, B 사람 확인 후 계산 |
+| TEL-050 | A / Codex | codex/a-ai-intent | Review | engine/, tests/engine/, docs/handoffs/A*.md, 작업 기록 | B 변경 없이 AS 기존 기한 확인·입력 불가 확인항목 명시 오류, B 연결 인계 |
+| TEL-051 | A / Codex | codex/a-ai-intent | Review | A 변경 11파일·작업/인수인계 | 최신 main 기준 선별 commit/push 및 새 AI PR 제출 |
+
+## TEL-051 — AI 변경 PR 제출
+
+사용자가 TEL-049/050 결과의 PR 제출을 승인했다. 기존 PR #2는 이미 병합됐으므로 최신 main1cd1186에서 새 codex/a-ai-intent를 만들었다. 작업 11파일의 checksum이 전환 전후 동일함을 확인했고 B 코드/설정과 C 데이터는 보존했다. 계획: 최종 backend/typecheck/build·비밀값/범위 검사 → 선별 커밋·push → main 대상 새 PR → CI 상태 확인. main 병합·배포는 하지 않는다. B 영속 비용원장·registry 주입이 필수 후속이며 실제 모델 증거/대역 회귀/운영 인수를 구분해 PR에 기록한다.
+
+제출 전 PASS: main1cd1186 기반 backend186개, frontend vue-tsc --noEmit / vite build36modules, diff 공백·문서 링크·11파일 소유 범위·실제 키 불포함. 배포/Oracle/브라우저/운영 원장 인수 및 새 유료 호출은 SKIPPED. PR head의 CI는 GitHub Checks에서 별도 확인한다.
+
+## TEL-050 — 최신 B 화면에 맞춘 A 확인 초안
+
+사용자 결정: B 수정은 최소화하고 A에서 흡수 가능한 부분부터 수정한다. 기존 A 로컬 AI 구현을 보존한다.
+계획: B 기존 AS의 누락 기한을 원문 추출 이후 결정적으로 제안하고 사람 확인 질문 유지 → B가 입력할 수 없는 확인 항목은 원자적으로 AI_REVIEW_UNSUPPORTED 반환 → B 원장/주입/수동 경로·확장 UI 연결 문서 별도 작성 → 최신 main+A 복사본에서 API/DB 및 UI 스크립트 회귀.
+수용: 명시 기한/모호함/대상 선택은 덮어쓰지 않음, 제안은 유일한 기존 AS·원래 창 안 요청에만 적용, 근거 조작 없음, 사람 확인 전 계산422/확인 후 기존 확정 경로, 부분 operation 제거·확인 질문 삭제·미지원 자동 배정 없음. B 코드/공유 DTO/DB/UI/infra/C 데이터 무변경.
+위험: 원장 미연결은 A가 해결할 운영 소유 범위가 아니다. 현재 B 화면의 고객/대여기간/operations 확인 편집 한계를 오류로 알리며 모든 네 업무 화면 지원 완료로 주장하지 않는다. 실제 모델 재호출은 필요하지 않은 후처리 변경이므로 기본 시험은 provider 대역과 저장된 합성 응답을 사용한다.
+
+결과: A의 B 연결부에 `b_review.py`를 추가했다. 검증된 해석 이후에만 기존 AS 기한을 확인용 제안하고, 기존 품목 참조를 B의 소요시간 추천에 표시한다. 명시값/모호함/대상 불명/원래 창 밖에는 제안을 하지 않는다. 입력 불가능한 질문은 삭제하지 않고 AI_REVIEW_UNSUPPORTED와 전체 payload=null로 차단한다. 독립 OpenAIInterpreter의 네 업무 추출은 그대로다. B 필수 원장·registry 주입·환경과 후속 수동/확장 화면·seed 검수는 docs/handoffs/A_AI_CONNECTION.md로 분리했다.
+PASS canonical 및 최신 main9f27e56+A 임시 결합 backend pytest186개(기존160+새26), B 무수정 RequestPanel 반응형 함수에서 17시 추천 미노출/40분 종료/기한 체크 전false·후true, 기존 API 미확인422→확인→READY→confirm→DB 기한11시 유지. PASS 최신 B typecheck/build(Vite36 modules), diff/소유 범위 검사. NOT CONFIGURED 원격 scripts/check.sh(없음). SKIPPED 실제 브라우저/Oracle/배포/운영 비용원장/추가 유료 모델 호출. B/C 파일·공유 계약 변경 및 commit/push/배포 없음.
+
+## TEL-049 — OpenAI 자연어 해석
+
+사용자 요청: 자연어 요청을 기존 B v1 형식으로 변환한다. 실제 검증은 gpt-5.6-luna, 이번 총 $0.05 이내로 승인(2026-10-16). 키는 저장소 외부 환경변수로만 사용한다.
+계획: 기존 공용 JSON Schema로 Responses Structured Outputs 호출 → 타입·참조·원문 근거·KST 상대 날짜 검사 → 누락 확인 질문 → B 기존 해석/사람 확인/solver 경로 시험. 모델 호출과 비용 예약은 주입 경계로 두고 순수 계산은 보존한다. SDK/런타임 의존성·B DTO/service/DB/UI는 추가·변경하지 않는다.
+수용 기준: 네 업무/모호함/누락/상대 날짜, 잘못된 JSON·근거·ID·거부·시간초과·429/5xx·예산 차단, 전체 회귀, 실제 최소 모델 응답과 B API→사람 확인→계산 증거. C gold/eval은 사용하지 않는다.
+위험: 기존 비용 계약의 영속 BudgetPort는 B 책임이며 현재 원격에는 없다. A가 임의 메모리 원장을 운영용으로 대신하지 않는다. 운영 무인자 연결은 비용 adapter 미설정 시 명시 오류로 차단하며 실제 검증의 제한 예산 대역과 구분한다. 키/모델만 설정하고 운영 AI 연결 완료로 주장하지 않는다. 신규 업무 등 solver 기존 제한은 유지한다.
+
+TEL-049 결과: Responses strict Structured Outputs + 공유 intent 스키마, 결정적 후검증·확인 질문, 모델/usage/attempt metadata, 프로세스 동시1·토큰/예산 예약·제한 재시도를 구현했다. B API에서 원문→실제 모델→사람 확인→solver→confirm→격리 SQLite 재조회로 AS10:15 변경을 확인했다. final prompt v1.1 상대 날짜·모호한2시까지 실제3사례 PASS. 개발 총7호출의 누적 최악 예약 $0.0308로 승인 $0.05 이내이며 청구 확정액은 아니다. B 서비스/DTO/DB/UI/infra 및 C 데이터 무변경, 새 의존성 없음. 운영은 B 영속 BudgetPort 주입이 남아 있다.
+
+검증: PASS `cd app/backend && .venv/bin/python -m pytest -q` 160개(기존107 + 해석53), 외부 anyio deprecation1. PASS `git diff --check`, 변경 범위·비밀값 검사. NOT CONFIGURED 원격 `sh scripts/check.sh`(없음, exit127); SKIPPED infra/scripts/check.sh(배포 환경/Docker 필요), frontend 재빌드(변경 없음), Oracle/브라우저/클라우드/C 독립 인수. 실제 API 프로브는 합성 요청·격리 DB·시험 비용 adapter이며 운영 비용원장 인수는 아니다. 아직 commit/push/배포하지 않았다. 세부 재현/연결은 docs/handoffs/A.md.
 
 ## TEL-046 이식 계획 및 위험
 

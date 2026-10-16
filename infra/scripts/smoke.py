@@ -56,9 +56,20 @@ step("운영 현황 / 물리 합계 12", s == 200 and ops["total_assets"] == 12,
 text = "안녕하세요 한빛상사입니다. 오늘 프린터 회수를 오후 2시로 미뤄 주실 수 있을까요?"
 s, req = call("POST", "/requests", {"source_customer_id": "C-H", "text": text}, {"Idempotency-Key": "smoke-req"})
 step("요청 저장 (한글 원문)", s in (200, 201) and req["text"] == text, req.get("id", ""))
-s, r = call("POST", f"/requests/{req['id']}/interpret", {"expected_request_revision": req["revision"]})
-step("해석", s == 200, r.get("interpretation", {}).get("origin", r))
-payload = r["interpretation"]["payload"]
+if os.environ.get("SMOKE_AI", "1") == "0":
+    # 유료 AI 호출 없이: 사람이 직접 입력한 해석으로 계산·확정 경로만 시험
+    payload = {"schema_version": "rental.intent.v1", "needs_confirmation": [], "operations": [dict(
+        operation="RESCHEDULE", kind="PICKUP", target_job_id="J-PICK1", item_id=None, asset_ids=[], quantity=None,
+        source_customer_id="C-H", destination_customer_id=None, window_start="2026-10-16T14:00:00+09:00",
+        window_end=None, due_at=None, rental_end_at=None, priority_hint="UNKNOWN", evidence=[])]}
+    step("해석 건너뜀 (SMOKE_AI=0, 직접 입력)", True)
+else:
+    s, r = call("POST", f"/requests/{req['id']}/interpret", {"expected_request_revision": req["revision"]})
+    step("해석", s == 200, r.get("interpretation", {}).get("origin", r))
+    payload = r["interpretation"]["payload"]
+    o = payload["operations"][0]
+    step("해석 결과: J-PICK1 회수 14:00", o.get("target_job_id") == "J-PICK1" and o.get("kind") == "PICKUP"
+         and o.get("window_start") == "2026-10-16T14:00:00+09:00", json.dumps(o, ensure_ascii=False)[:300])
 op = payload["operations"][0]
 op["window_end"], op["due_at"] = "2026-10-16T14:10:00+09:00", "2026-10-16T17:00:00+09:00"
 s, r = call("PUT", f"/requests/{req['id']}/interpretation", {
@@ -81,6 +92,10 @@ step("DB 재조회: 현행 계획·revision", ops2["workspace"]["current_plan_id
      and ops2["workspace"]["state_revision"] == rev + 1, f"r{ops2['workspace']['state_revision']}")
 assets = {a["id"]: a for a in ops2["assets"]}
 step("실제 장비 상태 불변 (event 전)", assets["P01"]["physical_state"] == "AT_CUSTOMER")
+s, ai = call("GET", "/admin/ai")
+if s == 200:
+    print(f"  AI: mode={ai['engine_mode']} model={ai['model_id']} 호출 성공 {ai['calls']['ok']} / 실패 {ai['calls']['error']}"
+          f" · 사용 ${ai['settled_usd']:.4f} (예약 포함 ${ai['committed_usd']:.4f} / 한도 ${ai['limit_usd']:.2f})")
 s, _ = call("POST", "/admin/reset")
 step("시연 데이터 원복", s == 200)
 print("\n모든 단계 통과")

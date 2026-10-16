@@ -253,3 +253,10 @@ def reset(_: User = Depends(require_admin)):
     tx(lambda c: load_seed(c, seed))
     return {"ok": True, "dataset_version": seed["manifest"]["dataset_version"],
             "seed_sha256": seed["manifest"].get("sha256")}
+
+
+@router.get("/admin/ai")
+def ai_usage(_: User = Depends(require_admin)):
+    """AI 해석 호출 기록·비용 (시연 증거용). 원문·키는 포함하지 않는다."""
+    from rentwise.services.ai_ledger import summary
+    return {"engine_mode": settings.engine_mode, "model_id": settings.openai_model, **summary()}

@@ -113,7 +113,7 @@ JOBS = [
     ("J-DEL2", "DELIVERY", "N02", "NB-A", "L-W", "L-D", "E2", 0, (11, 0, 11, 30), (0, 11, 30)),
     ("J-PICK2", "PICKUP", "N04", "NB-A", "L-J", "L-W", "E3", 0, (15, 30, 16, 0), (0, 17, 0)),
     ("J-DEL3", "DELIVERY", "W03", "WP-A", "L-W", "L-M", "E2", 1, (10, 0, 11, 0), (1, 11, 0)),
-    ("J-AS2", "AS", "P03", "PR-A", "L-D", "L-D", "E1", 1, (14, 0, 15, 0), (1, 15, 0)),
+    ("J-AS2", "AS", "P03", "PR-A", "L-D", "L-D", "E2", 1, (14, 0, 15, 0), (1, 15, 0)),
     ("J-TR1", "TRANSFER", "N01", "NB-A", "L-M", "L-H", "E3", 2, (11, 0, 12, 0), (2, 12, 0)),
     ("J-PICK3", "PICKUP", "W02", "WP-A", "L-S", "L-W", "E1", 3, (10, 0, 11, 0), (3, 12, 0)),
     ("J-DEL4", "DELIVERY", "P04", "PR-A", "L-W", "L-J", "E2", 3, (14, 0, 14, 30), (3, 14, 30)),
@@ -168,7 +168,8 @@ def build():
             jobs.append({
                 "id": prep_id, "request_id": None, "kind": "PREP", "operation": "CREATE",
                 "asset_ids": [asset], "item_id": item, "quantity": 1, "from_id": "L-W", "to_id": "L-W",
-                "window_start": iso(back), "window_end": iso(p_end), "due_at": iso(p_end),
+                # 준비 작업은 반납 이후 당일 영업 종료 전까지 언제든 가능 (회수가 늦어지면 함께 밀림)
+                "window_start": iso(back), "window_end": iso(at(day, 18)), "due_at": iso(at(day, 18)),
                 "rental_end_at": None, "priority": "NORMAL", "status": "ASSIGNED", "revision": 1,
             })
             plan_items.append({
@@ -186,6 +187,10 @@ def build():
     return jobs, plan_items, deps
 
 
+def _first_service_end(plan_item):
+    return next(x["end_at"] for x in plan_item["segments"] if x["kind"] == "SERVICE")
+
+
 def main():
     jobs, plan_items, deps = build()
     pi = {p["job_id"]: p for p in plan_items}
@@ -199,6 +204,8 @@ def main():
          "actual_end": None, "expected_return_at": iso(at(5, 10)), "status": "ACTIVE"},
         {"id": "R-M", "asset_id": "N01", "customer_id": "C-M", "actual_start": iso(at(-5, 10)),
          "actual_end": None, "expected_return_at": iso(at(2, 11)), "status": "ACTIVE"},
+        {"id": "R-HT", "asset_id": "N01", "customer_id": "C-H", "actual_start": None,
+         "actual_end": None, "expected_return_at": None, "status": "PLANNED"},
         {"id": "R-J", "asset_id": "N04", "customer_id": "C-J", "actual_start": iso(at(-7, 10)),
          "actual_end": None, "expected_return_at": iso(at(0, 15, 30)), "status": "ACTIVE"},
         {"id": "R-B", "asset_id": "W01", "customer_id": "C-B", "actual_start": iso(at(-30, 10)),
@@ -215,7 +222,10 @@ def main():
          "end_at": None, "release_job_id": None},
         {"id": "RS-D", "asset_id": "P03", "rental_id": "R-D", "start_at": iso(at(-10, 9)),
          "end_at": pi["J-PREP4"]["end_at"], "release_job_id": "J-PREP4"},
+        # N01 미래상사 대여: 직접 이동(J-TR1) 첫 방문 종료 시 끝나고 한빛 대여로 이어짐
         {"id": "RS-M", "asset_id": "N01", "rental_id": "R-M", "start_at": iso(at(-5, 9)),
+         "end_at": _first_service_end(pi["J-TR1"]), "release_job_id": "J-TR1"},
+        {"id": "RS-HT", "asset_id": "N01", "rental_id": "R-HT", "start_at": _first_service_end(pi["J-TR1"]),
          "end_at": None, "release_job_id": None},
         {"id": "RS-J", "asset_id": "N04", "rental_id": "R-J", "start_at": iso(at(-7, 9)),
          "end_at": pi["J-PREP2"]["end_at"], "release_job_id": "J-PREP2"},

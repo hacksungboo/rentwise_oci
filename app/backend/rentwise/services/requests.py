@@ -106,6 +106,8 @@ def interpret(conn: Connection, request_id: str, expected_request_revision: int)
         existing_jobs=_existing_jobs_summary(conn, req.source_customer_id))
     engine = get_engine()
     result = engine.interpret(inp)
+    from rentwise.services.ai_ledger import record_call
+    record_call(request_id, engine.mode, result)
     if result.status != "OK" or result.payload is None:
         err = result.error
         raise ApiError(502, (err.code if err else "AI_SCHEMA_INVALID"),

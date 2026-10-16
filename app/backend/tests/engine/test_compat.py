@@ -70,10 +70,9 @@ def test_actual_b_seed_nullable_rental_ids_are_supported_without_fabrication():
     assert sum(p.count for p in result.physical_counts)==12
     assert snap==before
     assert sum(r['rental_id'] is None for r in snap['reservations'])==3
-    # Existing AS2 crosses a break; this is detected, not declared valid.
+    # B seed fix (2026-10-17): J-AS2 moved to E2, so the base plan no longer crosses E1's break.
     checked=RealEngine().validate(snap,[c.PlanItem(**p) for p in snap['plan_items']])
-    assert checked.status=='INVALID'
-    assert any(v.code=='EMPLOYEE_BREAK' and v.job_ids==['J-AS2'] for v in checked.violations)
+    assert checked.status=='VALID',checked.violations
 
 
 def test_staff_candidate_keeps_job_conditions_asset_actuals_and_all_other_rows():
@@ -166,7 +165,8 @@ def test_missing_real_travel_is_data_missing_but_diagonal_is_optional():
     assert RealEngine().validate(s,[c.PlanItem(**p) for p in s['plan_items']]).status=='DATA_MISSING'
 
 
-def test_interpret_is_explicit_error_until_a_model_is_supplied():
+def test_interpret_is_explicit_error_until_a_model_is_supplied(monkeypatch):
+    monkeypatch.delenv('OPENAI_API_KEY', raising=False)
     inp=c.InterpretationInput(request_id='R',request_revision=1,received_at='2026-10-16T09:00:00+09:00',text='회수',
         source_customer_id=None,candidate_customers=[],candidate_items=[])
     r=RealEngine().interpret(inp)
@@ -257,7 +257,7 @@ def test_ready_count_and_conditional_boundary_respect_bookings_and_preparation()
     assert snapshot==inp.snapshot
 
 
-def test_real_b_delay_request_stays_unresolved_and_confirm_cannot_write(admin,real_registry):
+def test_real_b_delay_request_uses_v2_core_and_confirm_writes_full_candidate(admin,real_registry):
     from rentwise.db import database
     with database.get_db_engine().connect() as conn: before=database.read_snapshot(conn)
     req=admin.post('/api/v1/requests',json={'source_customer_id':'C-H','text':'회수 지연'}).json()
@@ -268,8 +268,14 @@ def test_real_b_delay_request_stays_unresolved_and_confirm_cannot_write(admin,re
         'payload':{'schema_version':'rental.intent.v1','operations':[op],'needs_confirmation':[]},'acknowledged_paths':[]})
     assert saved.status_code==200,saved.text
     draft=admin.post('/api/v1/plans',json={'request_id':req['id'],'interpretation_revision':saved.json()['interpretation']['revision'],'base_state_revision':7})
-    assert draft.status_code==201 and draft.json()['status']=='UNRESOLVED',draft.text
-    assert draft.json()['solver_status']=='NEEDS_REVIEW'
-    blocked=admin.post(f"/api/v1/plans/{draft.json()['id']}/confirm",json={'expected_plan_revision':1,'base_state_revision':7})
-    assert blocked.status_code==422 and blocked.json()['error']['code']=='PLAN_NOT_READY'
-    with database.get_db_engine().connect() as conn: assert database.read_snapshot(conn)==before
+    # B v2 bridge (2026-10-17): delayed pickup goes through A's v2 core, not the v1 compat solver.
+    assert draft.status_code==201 and draft.json()['status']=='READY',draft.text
+    assert draft.json()['solver_version']=='rental-solver-normal-delay-v1'
+    with database.get_db_engine().connect() as conn: assert database.read_snapshot(conn)==before  # draft writes nothing
+    done=admin.post(f"/api/v1/plans/{draft.json()['id']}/confirm",json={'expected_plan_revision':1,'base_state_revision':7})
+    assert done.status_code==200,done.text
+    with database.get_db_engine().connect() as conn: after=database.read_snapshot(conn)
+    jobs={j['id']:j for j in after['jobs']}; rentals={r['id']:r for r in after['rentals']}
+    assert jobs['J-PICK1']['window_start']=='2026-10-16T14:00:00+09:00'
+    assert jobs['J-DEL1']['asset_ids']==['P02'] and rentals['R-S2']['asset_id']=='P02'
+    assert not any(d['id']=='D-PREP1-DEL1' for d in after['dependencies'])

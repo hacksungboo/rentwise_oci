@@ -16,7 +16,7 @@ from pydantic import ValidationError
 from rentwise.contracts import types as c
 from rentwise.contracts.v2.schema import ContractError, timestamp
 
-VERSION = 'rental-solver-b-v1-1'
+VERSION = 'rental-solver-b-v1-2'
 TABLES = ('locations', 'customers', 'items', 'assets', 'rentals', 'reservations',
           'employees', 'shifts', 'jobs', 'plan_items', 'dependencies', 'travel_times')
 FROZEN = {'IN_PROGRESS', 'COMPLETED', 'FAILED'}
@@ -357,7 +357,9 @@ def solve(inp, as_of):
                 if customer is not None and (customer not in ix['customers'] or ix['customers'][customer]['location_id']!=location):
                     return result('NEEDS_REVIEW',code='B_V1_PERSISTENCE_UNSUPPORTED')
             for k in ('item_id','asset_ids','quantity','from_id','to_id','rental_end_at'):
-                if k in raw and raw[k]!=j[k]: return result('NEEDS_REVIEW',code='B_V1_PERSISTENCE_UNSUPPORTED')
+                # Intent's nullable values mean unmentioned on RESCHEDULE. B passes
+                # quantity/rental_end_at null through; preserve the stored condition.
+                if k in raw and raw[k] is not None and raw[k]!=j[k]: return result('NEEDS_REVIEW',code='B_V1_PERSISTENCE_UNSUPPORTED')
             if any(raw.get(k) is None for k in ('window_start','window_end','due_at')):
                 return result('NEEDS_REVIEW',code='UNCONFIRMED_FIELDS')
             if not (timestamp(j['window_start'])<=timestamp(op.window_start)<timestamp(op.window_end)<=timestamp(j['window_end'])

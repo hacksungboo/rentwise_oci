@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
-import { api, type SystemInfo } from '../api'
+import { api, type AiUsage, type SystemInfo } from '../api'
+import { time } from '../format'
 
 const emit = defineEmits<{ (e: 'close'): void }>()
 const info = ref<SystemInfo | null>(null)
 const error = ref('')
+const ai = ref<AiUsage | null>(null)
 
 onMounted(async () => {
   try {
@@ -12,7 +14,14 @@ onMounted(async () => {
   } catch {
     error.value = '실행 환경 정보를 불러오지 못했습니다.'
   }
+  try {
+    ai.value = await api.aiUsage()
+  } catch {
+    ai.value = null   // 관리자만 조회 가능
+  }
 })
+
+const usd = (n: number) => '$' + n.toFixed(4)
 
 function uptime(s: number) {
   const h = Math.floor(s / 3600)
@@ -53,6 +62,22 @@ function uptime(s: number) {
             <dt>DB 호스트</dt><dd>{{ info.db.server_host ?? '—' }}</dd>
           </dl>
         </section>
+        <section v-if="ai">
+          <h3>AI 해석</h3>
+          <dl class="num">
+            <dt>모델</dt><dd>{{ ai.engine_mode === 'real' ? ai.model_id : '고정 응답 (AI 미사용)' }}</dd>
+            <dt>호출</dt><dd>성공 {{ ai.calls.ok }} · 실패 {{ ai.calls.error }}</dd>
+            <dt>사용액</dt><dd>{{ usd(ai.settled_usd) }} <small>(예약 포함 {{ usd(ai.committed_usd) }} / 한도 {{ usd(ai.limit_usd) }})</small></dd>
+          </dl>
+          <ol v-if="ai.recent.length" class="calls">
+            <li v-for="(c, i) in ai.recent" :key="i" :class="c.status === 'OK' ? 'ok' : 'err'">
+              <span>{{ time(c.at) }}</span>
+              <span>{{ c.status === 'OK' ? '성공' : c.error_code }}</span>
+              <span class="num">{{ c.input_tokens ?? '—' }}→{{ c.output_tokens ?? '—' }} tok</span>
+              <span class="num">{{ c.latency_ms != null ? (c.latency_ms / 1000).toFixed(1) + 's' : '—' }}</span>
+            </li>
+          </ol>
+        </section>
         <section>
           <h3>배포</h3>
           <dl class="num">
@@ -79,4 +104,7 @@ dl { display: grid; grid-template-columns: 96px minmax(0, 1fr); gap: 6px 12px; m
 dt { color: var(--ink-3); }
 dd { margin: 0; overflow-wrap: anywhere; }
 .mono { font-size: 12px; }
+.calls { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; font-size: 12.5px; }
+.calls li { display: grid; grid-template-columns: 44px minmax(0, 1fr) auto 40px; gap: 8px; padding: 4px 8px; border-radius: 6px; background: var(--bg); }
+.calls li.err { color: var(--as, #d2553f); }
 </style>

@@ -7,6 +7,7 @@
 from __future__ import annotations
 
 import hashlib
+import logging
 import json
 import uuid
 from datetime import timedelta
@@ -22,7 +23,10 @@ from rentwise.db import tables as T
 from rentwise.db.database import J, _plan_item_row, plan_item_from_row, read_snapshot, row_to_dict
 from rentwise.engine_registry import get_engine
 from rentwise.services.requests import _req, latest_interpretation
+from rentwise.services import v2_bridge
 from rentwise.timeutil import iso, now, parse, to_db
+
+log = logging.getLogger("rentwise.plans")
 
 HORIZON_DAYS = 7
 
@@ -99,20 +103,38 @@ def create_plan(conn: Connection, request_id: str, interpretation_revision: int,
     input_hash = canonical_hash(body)
     solver_input = SolverInput(**body, input_hash=input_hash)
     engine = get_engine()
-    result: SolverResult = engine.solve(solver_input)
-
     n = conn.execute(select(func.count()).select_from(T.plans)).scalar_one() + 1
     pid = f"PL-D{n:02d}-{uuid.uuid4().hex[:4]}"
+
+    v2_candidate = None
+    op_dicts = [o.model_dump() for o in ops]
+    if engine.mode == "real" and v2_bridge.supports(op_dicts):
+        # 회수 지연: 반납→정비→다음 납품까지 함께 바뀌므로 A v2 core 로 계산하고 완전 후보를 저장
+        try:
+            v2snap = _v2_snapshot(snapshot, ws, body)
+            v2in = v2_bridge.build_input(v2snap, op_dicts, request_id=request_id, request_revision=1,
+                                         interpretation_revision=interpretation_revision, plan_id=pid,
+                                         base_plan_id=ws.current_plan_id, overrides=overrides)
+            result, v2_candidate = v2_bridge.to_v1_result(v2snap, v2_bridge.solve(v2in))
+            input_hash = v2in["input_hash"]
+        except v2_bridge.BridgeUnsupported as exc:
+            log.info("v2 경로 미지원, v1 로 계산: %s", exc)
+            result = engine.solve(solver_input)
+    else:
+        result: SolverResult = engine.solve(solver_input)
+
     status = "READY" if result.status == "FEASIBLE" else "UNRESOLVED"
     meta = result.model_dump(exclude={"candidate_items"})
     meta["inherited_paths"] = inherited
+    if v2_candidate is not None:
+        meta["v2_candidate"] = v2_candidate
     conn.execute(insert(T.plans).values(
         id=pid, revision=1, base_plan_id=ws.current_plan_id, base_state_revision=ws.state_revision,
         request_id=request_id, interpretation_revision=interpretation_revision, status=status,
         solver_status=result.status, solver_version=result.solver_version, engine_mode=engine.mode,
         policy_version="policy-v1", travel_version="travel-v1", input_hash=input_hash,
         result_json=json.dumps(meta, ensure_ascii=False, default=str),
-        operations_json=J([o.model_dump() for o in ops]), created_at=now()))
+        operations_json=J(op_dicts), created_at=now()))
     rows = []
     for p in result.candidate_items:
         d = p.model_dump()
@@ -122,6 +144,19 @@ def create_plan(conn: Connection, request_id: str, interpretation_revision: int,
         conn.execute(insert(T.plan_items), rows)
     conn.execute(update(T.requests).where(T.requests.c.id == req.id).values(status="DRAFTED"))
     return plan_view(conn, pid)
+
+
+def _v2_snapshot(snapshot: dict, ws, body: dict) -> dict:
+    return v2_bridge.to_v2_snapshot(
+        snapshot, state_revision=ws.state_revision, as_of=_as_of(), dataset_version=ws.dataset_version,
+        travel_version=body["travel_version"], policy_version=body["policy_version"],
+        horizon_start=body["horizon_start"], horizon_end=body["horizon_end"])
+
+
+def _as_of() -> str:
+    if settings.seed_path.exists():
+        return json.loads(settings.seed_path.read_text(encoding="utf-8"))["manifest"]["clock_anchor"]
+    return iso(now())
 
 
 # --------------------------------------------------------------------------- 조회·비교
@@ -151,6 +186,7 @@ def plan_view(conn: Connection, plan_id: str) -> dict:
     ws = _ws(conn)
     pd = row_to_dict(T.plans, p)
     meta = json.loads(pd.pop("result_json") or "{}")
+    meta.pop("v2_candidate", None)
     pd["operations"] = json.loads(pd.pop("operations_json") or "[]")
     if pd["status"] == "READY" and p.base_state_revision != ws.state_revision:
         pd["status"] = "STALE"
@@ -213,14 +249,23 @@ def confirm(conn: Connection, plan_id: str, expected_plan_revision: int, base_st
     # 잠금 안에서 최신 snapshot 으로 최종 검사 (탐색·LLM 없음)
     snapshot = read_snapshot(conn)
     cand = list(_items(conn, plan_id).values())
-    vr = get_engine().validate(snapshot, [PlanItem(**{k: v for k, v in c.items() if k in PlanItem.model_fields})
-                                          for c in cand])
+    meta = json.loads(p.result_json or "{}")
+    v2_candidate = meta.get("v2_candidate")
+    if v2_candidate is not None:
+        v2snap = _v2_snapshot(snapshot, ws, {"travel_version": p.travel_version, "policy_version": p.policy_version,
+                                             **_horizon()})
+        vr = v2_bridge.validate(v2snap, v2_candidate)
+    else:
+        vr = get_engine().validate(snapshot, [PlanItem(**{k: v for k, v in c.items() if k in PlanItem.model_fields})
+                                              for c in cand])
     if vr.status != "VALID":
         raise ApiError(422, "CONSTRAINT_VIOLATION", "제약 위반이 있어 확정할 수 없습니다.",
                        {"violations": [v.model_dump() for v in vr.violations], "missing_fields": vr.missing_fields})
 
-    meta = json.loads(p.result_json or "{}")
     ts = now()
+    if v2_candidate is not None:
+        _apply_v2(conn, snapshot, v2snap, v2_candidate, meta)
+        return _finish_confirm(conn, ws, p, plan_id, actor, trace_id, ts)
     # 1) 예약 교체
     for ch in meta.get("reservation_changes", []):
         if ch["action"] in ("REPLACE", "CANCEL") and ch["old_id"]:
@@ -251,6 +296,49 @@ def confirm(conn: Connection, plan_id: str, expected_plan_revision: int, base_st
         if b and b["asset_ids"] != c["asset_ids"]:  # 대체 개체 → 기존 개체 재사용 의존 해제
             conn.execute(delete(T.dependencies).where((T.dependencies.c.successor_job_id == c["job_id"])
                                                       & (T.dependencies.c.reason == "ASSET_REUSE")))
+    return _finish_confirm(conn, ws, p, plan_id, actor, trace_id, ts)
+
+
+def _horizon() -> dict:
+    anchor = parse(_as_of())
+    h0 = anchor.replace(hour=0, minute=0, second=0, microsecond=0)
+    return {"horizon_start": iso(h0), "horizon_end": iso(h0 + timedelta(days=HORIZON_DAYS))}
+
+
+def _apply_v2(conn: Connection, snapshot: dict, v2snap: dict, cand: dict, meta: dict) -> None:
+    """A v2 완전 후보를 운영 표에 반영: 예약·작업·대여·의존 (계획 행은 초안 때 이미 저장됨)."""
+    for ch in meta.get("reservation_changes", []):
+        if ch["old_id"]:
+            conn.execute(update(T.reservations).where(T.reservations.c.id == ch["old_id"])
+                         .values(status="SUPERSEDED" if ch["action"] == "REPLACE" else "CANCELLED"))
+        r = ch["reservation"]
+        if ch["action"] in ("REPLACE", "CREATE") and r:
+            conn.execute(insert(T.reservations).values(
+                id=r["id"], asset_id=r["asset_id"], rental_id=r.get("rental_id"), start_at=to_db(r["start_at"]),
+                end_at=to_db(r.get("end_at")), release_job_id=r.get("release_job_id"), plan_id=cand["plan_id"],
+                status="ACTIVE", review_required=False))
+    for j in v2_bridge.changed_jobs(v2snap, cand):
+        conn.execute(update(T.jobs).where(T.jobs.c.id == j["id"]).values(
+            window_start=to_db(j["window_start"]), window_end=to_db(j["window_end"]), due_at=to_db(j["due_at"]),
+            asset_ids_json=J(j["asset_ids"]), revision=T.jobs.c.revision + 1))
+    old_rentals = {r["id"]: r for r in snapshot["rentals"]}
+    for r in cand["rentals"]:
+        o = old_rentals.get(r["id"])
+        if o and (o["asset_id"] != r["asset_id"] or o["expected_return_at"] != r["expected_return_at"]):
+            conn.execute(update(T.rentals).where(T.rentals.c.id == r["id"]).values(
+                asset_id=r["asset_id"], expected_return_at=to_db(r["expected_return_at"])))
+    old_deps = {d["id"]: d for d in snapshot["dependencies"]}
+    keep = {d["id"] for d in cand["dependencies"]}
+    for did in set(old_deps) - keep:
+        conn.execute(delete(T.dependencies).where(T.dependencies.c.id == did))
+    for d in cand["dependencies"]:
+        if d["id"] not in old_deps:
+            conn.execute(insert(T.dependencies).values(
+                id=d["id"], predecessor_job_id=d["predecessor_job_id"], successor_job_id=d["successor_job_id"],
+                minimum_gap_minutes=d["minimum_gap_minutes"], reason=d["reason"]))
+
+
+def _finish_confirm(conn: Connection, ws, p, plan_id: str, actor: str, trace_id: str, ts) -> dict:
     # 3) 현행 계획 교체·revision 증가
     if p.base_plan_id:
         conn.execute(update(T.plans).where(T.plans.c.id == p.base_plan_id).values(status="SUPERSEDED"))

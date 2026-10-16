@@ -12,7 +12,7 @@
       "창고 준비는 직원 자원을 쓰지 않는 자동 경과 구간",
       "E2 휴식은 12:30~13:30으로 개별 설정 (명세 §8.2)"
     ],
-    "sha256": "928eeaae59485bcc5da220f07b1f00473264cc0a4381d2ce42eac9ea2ad3a3c6"
+    "sha256": "223805719f623fae8540f025ceb45da64bd61d27df0e2f9398b83757b9ce0f0b"
   },
   "workspace": {
     "id": "DEMO",
@@ -485,6 +485,15 @@
       "status": "ACTIVE"
     },
     {
+      "id": "R-HT",
+      "asset_id": "N01",
+      "customer_id": "C-H",
+      "actual_start": null,
+      "actual_end": null,
+      "expected_return_at": null,
+      "status": "PLANNED"
+    },
+    {
       "id": "R-J",
       "asset_id": "N04",
       "customer_id": "C-J",
@@ -551,6 +560,17 @@
       "asset_id": "N01",
       "rental_id": "R-M",
       "start_at": "2026-10-11T09:00:00+09:00",
+      "end_at": "2026-10-18T11:10:00+09:00",
+      "release_job_id": "J-TR1",
+      "plan_id": "PL-007",
+      "status": "ACTIVE",
+      "review_required": false
+    },
+    {
+      "id": "RS-HT",
+      "asset_id": "N01",
+      "rental_id": "R-HT",
+      "start_at": "2026-10-18T11:10:00+09:00",
       "end_at": null,
       "release_job_id": null,
       "plan_id": "PL-007",
@@ -1417,8 +1437,8 @@
       "from_id": "L-W",
       "to_id": "L-W",
       "window_start": "2026-10-16T10:30:00+09:00",
-      "window_end": "2026-10-16T11:00:00+09:00",
-      "due_at": "2026-10-16T11:00:00+09:00",
+      "window_end": "2026-10-16T18:00:00+09:00",
+      "due_at": "2026-10-16T18:00:00+09:00",
       "rental_end_at": null,
       "priority": "NORMAL",
       "status": "ASSIGNED",
@@ -1517,8 +1537,8 @@
       "from_id": "L-W",
       "to_id": "L-W",
       "window_start": "2026-10-16T16:00:00+09:00",
-      "window_end": "2026-10-16T16:20:00+09:00",
-      "due_at": "2026-10-16T16:20:00+09:00",
+      "window_end": "2026-10-16T18:00:00+09:00",
+      "due_at": "2026-10-16T18:00:00+09:00",
       "rental_end_at": null,
       "priority": "NORMAL",
       "status": "ASSIGNED",
@@ -1617,8 +1637,8 @@
       "from_id": "L-W",
       "to_id": "L-W",
       "window_start": "2026-10-19T10:40:00+09:00",
-      "window_end": "2026-10-19T11:20:00+09:00",
-      "due_at": "2026-10-19T11:20:00+09:00",
+      "window_end": "2026-10-19T18:00:00+09:00",
+      "due_at": "2026-10-19T18:00:00+09:00",
       "rental_end_at": null,
       "priority": "NORMAL",
       "status": "ASSIGNED",
@@ -1697,8 +1717,8 @@
       "from_id": "L-W",
       "to_id": "L-W",
       "window_start": "2026-10-21T10:35:00+09:00",
-      "window_end": "2026-10-21T11:05:00+09:00",
-      "due_at": "2026-10-21T11:05:00+09:00",
+      "window_end": "2026-10-21T18:00:00+09:00",
+      "due_at": "2026-10-21T18:00:00+09:00",
       "rental_end_at": null,
       "priority": "NORMAL",
       "status": "ASSIGNED",
@@ -2015,7 +2035,7 @@
       "id": "PI-J-AS2",
       "plan_id": "PL-007",
       "job_id": "J-AS2",
-      "employee_id": "E1",
+      "employee_id": "E2",
       "asset_ids": [
         "P03"
       ],
