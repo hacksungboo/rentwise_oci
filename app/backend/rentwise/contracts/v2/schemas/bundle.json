@@ -1,0 +1,1670 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$defs": {
+    "Location": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "name",
+        "kind",
+        "address",
+        "lat",
+        "lon"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "kind": {
+          "type": "string",
+          "enum": [
+            "WAREHOUSE",
+            "CUSTOMER"
+          ]
+        },
+        "address": {
+          "type": "string",
+          "minLength": 1
+        },
+        "lat": {
+          "type": "number",
+          "minimum": -90,
+          "maximum": 90
+        },
+        "lon": {
+          "type": "number",
+          "minimum": -180,
+          "maximum": 180
+        }
+      }
+    },
+    "Customer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "name",
+        "location_id",
+        "preferred_employee_id",
+        "visit_windows"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "location_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "preferred_employee_id": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "visit_windows": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "start",
+              "end"
+            ],
+            "properties": {
+              "start": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "end": {
+                "type": "string",
+                "format": "date-time"
+              }
+            }
+          }
+        }
+      }
+    },
+    "Item": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "category",
+        "model",
+        "service_minutes_by_kind",
+        "prep_minutes",
+        "direct_transfer_allowed",
+        "transfer_service_minutes"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "category": {
+          "type": "string",
+          "minLength": 1
+        },
+        "model": {
+          "type": "string",
+          "minLength": 1
+        },
+        "service_minutes_by_kind": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "DELIVERY",
+            "PICKUP",
+            "AS",
+            "TRANSFER"
+          ],
+          "properties": {
+            "DELIVERY": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "PICKUP": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "AS": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "TRANSFER": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        },
+        "prep_minutes": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "direct_transfer_allowed": {
+          "type": "boolean"
+        },
+        "transfer_service_minutes": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "pickup",
+            "delivery"
+          ],
+          "properties": {
+            "pickup": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "delivery": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        }
+      }
+    },
+    "Asset": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "item_id",
+        "physical_state",
+        "location_id",
+        "custody_employee_id",
+        "last_event_at",
+        "revision"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "item_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "physical_state": {
+          "type": "string",
+          "enum": [
+            "READY_WAREHOUSE",
+            "IN_TRANSIT",
+            "AT_CUSTOMER",
+            "PREP_REQUIRED",
+            "REPAIR",
+            "UNAVAILABLE",
+            "RETIRED"
+          ]
+        },
+        "location_id": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "custody_employee_id": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "last_event_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "revision": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "Rental": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "asset_id",
+        "customer_id",
+        "actual_start",
+        "actual_end",
+        "expected_return_at",
+        "status"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "asset_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "customer_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "actual_start": {
+          "anyOf": [
+            {
+              "type": "string",
+              "format": "date-time"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "actual_end": {
+          "anyOf": [
+            {
+              "type": "string",
+              "format": "date-time"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "expected_return_at": {
+          "anyOf": [
+            {
+              "type": "string",
+              "format": "date-time"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "PLANNED",
+            "ACTIVE",
+            "CLOSED",
+            "CANCELLED"
+          ]
+        }
+      }
+    },
+    "Reservation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "asset_id",
+        "rental_id",
+        "start_at",
+        "end_at",
+        "release_job_id",
+        "plan_id",
+        "status",
+        "review_required"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "asset_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "rental_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "start_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "end_at": {
+          "anyOf": [
+            {
+              "type": "string",
+              "format": "date-time"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "release_job_id": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "plan_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "ACTIVE",
+            "SUPERSEDED",
+            "CANCELLED"
+          ]
+        },
+        "review_required": {
+          "type": "boolean"
+        }
+      }
+    },
+    "Employee": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "name",
+        "skills",
+        "active"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "skills": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "task_kind",
+              "item_category"
+            ],
+            "properties": {
+              "task_kind": {
+                "type": "string",
+                "enum": [
+                  "DELIVERY",
+                  "PICKUP",
+                  "AS",
+                  "TRANSFER"
+                ]
+              },
+              "item_category": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          }
+        },
+        "active": {
+          "type": "boolean"
+        }
+      }
+    },
+    "Shift": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "employee_id",
+        "start_at",
+        "end_at",
+        "start_location_id",
+        "end_location_id",
+        "break_windows"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "employee_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "start_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "end_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "start_location_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "end_location_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "break_windows": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "start",
+              "end"
+            ],
+            "properties": {
+              "start": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "end": {
+                "type": "string",
+                "format": "date-time"
+              }
+            }
+          }
+        }
+      }
+    },
+    "Job": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "request_id",
+        "kind",
+        "operation",
+        "asset_ids",
+        "item_id",
+        "quantity",
+        "from_id",
+        "to_id",
+        "window_start",
+        "window_end",
+        "due_at",
+        "rental_end_at",
+        "priority",
+        "status",
+        "revision",
+        "destination_window_start",
+        "destination_window_end",
+        "direct_transfer_confirmed"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "request_id": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "kind": {
+          "type": "string",
+          "enum": [
+            "DELIVERY",
+            "PICKUP",
+            "AS",
+            "TRANSFER",
+            "PREP"
+          ]
+        },
+        "operation": {
+          "type": "string",
+          "enum": [
+            "CREATE",
+            "RESCHEDULE"
+          ]
+        },
+        "asset_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "item_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "quantity": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 12
+        },
+        "from_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "to_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "window_start": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "window_end": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "due_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "rental_end_at": {
+          "anyOf": [
+            {
+              "type": "string",
+              "format": "date-time"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "priority": {
+          "type": "string",
+          "enum": [
+            "NORMAL",
+            "URGENT"
+          ]
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "UNASSIGNED",
+            "ASSIGNED",
+            "IN_PROGRESS",
+            "COMPLETED",
+            "FAILED",
+            "CANCELLED"
+          ]
+        },
+        "revision": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "destination_window_start": {
+          "anyOf": [
+            {
+              "type": "string",
+              "format": "date-time"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "destination_window_end": {
+          "anyOf": [
+            {
+              "type": "string",
+              "format": "date-time"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "direct_transfer_confirmed": {
+          "type": "boolean"
+        }
+      }
+    },
+    "Segment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "from_id",
+        "to_id",
+        "start_at",
+        "end_at"
+      ],
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": [
+            "TRAVEL",
+            "SERVICE",
+            "PREP"
+          ]
+        },
+        "from_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "to_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "start_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "end_at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "PlanItem": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "plan_id",
+        "job_id",
+        "employee_id",
+        "asset_ids",
+        "start_at",
+        "end_at",
+        "segments_json",
+        "reason_codes"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "plan_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "job_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "employee_id": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "asset_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "start_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "end_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "segments_json": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Segment"
+          }
+        },
+        "reason_codes": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "Dependency": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "predecessor_job_id",
+        "successor_job_id",
+        "minimum_gap_minutes",
+        "reason"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "predecessor_job_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "successor_job_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "minimum_gap_minutes": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "TravelTime": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "from_id",
+        "to_id",
+        "minutes",
+        "source",
+        "version"
+      ],
+      "properties": {
+        "from_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "to_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "minutes": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "source": {
+          "type": "string",
+          "minLength": 1
+        },
+        "version": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "Snapshot": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "bundle_version",
+        "state_revision",
+        "as_of",
+        "dataset_version",
+        "policy_version",
+        "travel_version",
+        "horizon_start",
+        "horizon_end",
+        "locations",
+        "customers",
+        "items",
+        "assets",
+        "rentals",
+        "reservations",
+        "employees",
+        "shifts",
+        "jobs",
+        "plan_items",
+        "dependencies",
+        "travel_times"
+      ],
+      "properties": {
+        "schema_version": {
+          "type": "string",
+          "enum": [
+            "rental.snapshot.v2"
+          ]
+        },
+        "bundle_version": {
+          "type": "string",
+          "enum": [
+            "rental.bundle.v2"
+          ]
+        },
+        "state_revision": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "as_of": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "dataset_version": {
+          "type": "string",
+          "minLength": 1
+        },
+        "policy_version": {
+          "type": "string",
+          "minLength": 1
+        },
+        "travel_version": {
+          "type": "string",
+          "minLength": 1
+        },
+        "horizon_start": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "horizon_end": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "locations": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Location"
+          }
+        },
+        "customers": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Customer"
+          }
+        },
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Item"
+          }
+        },
+        "assets": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Asset"
+          }
+        },
+        "rentals": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Rental"
+          }
+        },
+        "reservations": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Reservation"
+          }
+        },
+        "employees": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Employee"
+          }
+        },
+        "shifts": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Shift"
+          }
+        },
+        "jobs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Job"
+          }
+        },
+        "plan_items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/PlanItem"
+          }
+        },
+        "dependencies": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Dependency"
+          }
+        },
+        "travel_times": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/TravelTime"
+          }
+        }
+      }
+    },
+    "CandidatePlan": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "bundle_version",
+        "base_state_revision",
+        "plan_id",
+        "approved_job_ids",
+        "jobs",
+        "plan_items",
+        "reservations",
+        "rentals",
+        "dependencies"
+      ],
+      "properties": {
+        "schema_version": {
+          "type": "string",
+          "enum": [
+            "rental.candidate.v2"
+          ]
+        },
+        "bundle_version": {
+          "type": "string",
+          "enum": [
+            "rental.bundle.v2"
+          ]
+        },
+        "base_state_revision": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "plan_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "approved_job_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "jobs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Job"
+          }
+        },
+        "plan_items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/PlanItem"
+          }
+        },
+        "reservations": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Reservation"
+          }
+        },
+        "rentals": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Rental"
+          }
+        },
+        "dependencies": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Dependency"
+          }
+        }
+      }
+    },
+    "NormalizedOperation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "operation",
+        "target_job_id",
+        "job",
+        "prep_job",
+        "rental_id",
+        "return_policy",
+        "confirmed"
+      ],
+      "properties": {
+        "schema_version": {
+          "type": "string",
+          "enum": [
+            "rental.operation.v2"
+          ]
+        },
+        "operation": {
+          "type": "string",
+          "enum": [
+            "CREATE",
+            "RESCHEDULE"
+          ]
+        },
+        "target_job_id": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "job": {
+          "$ref": "#/$defs/Job"
+        },
+        "prep_job": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Job"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "rental_id": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "return_policy": {
+          "type": "string",
+          "enum": [
+            "FIXED",
+            "OPEN_ENDED",
+            "NOT_APPLICABLE"
+          ]
+        },
+        "confirmed": {
+          "type": "boolean",
+          "const": true
+        }
+      }
+    },
+    "AvailabilityInput": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "bundle_version",
+        "snapshot",
+        "from_at",
+        "to_at",
+        "base_state_revision"
+      ],
+      "properties": {
+        "schema_version": {
+          "type": "string",
+          "enum": [
+            "rental.availability-input.v2"
+          ]
+        },
+        "bundle_version": {
+          "type": "string",
+          "enum": [
+            "rental.bundle.v2"
+          ]
+        },
+        "snapshot": {
+          "$ref": "#/$defs/Snapshot"
+        },
+        "from_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "to_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "base_state_revision": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "SolverOverride": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "job_id"
+      ],
+      "properties": {
+        "job_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "employee_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "asset_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "start_at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "SolverInput": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "bundle_version",
+        "input_hash",
+        "request_id",
+        "request_revision",
+        "interpretation_revision",
+        "plan_id",
+        "base_plan_id",
+        "base_state_revision",
+        "horizon_start",
+        "horizon_end",
+        "dataset_version",
+        "travel_version",
+        "policy_version",
+        "operations",
+        "approved_job_ids",
+        "snapshot",
+        "overrides",
+        "id_allocations",
+        "max_search_ms",
+        "max_candidates"
+      ],
+      "properties": {
+        "schema_version": {
+          "type": "string",
+          "enum": [
+            "rental.solver.v2"
+          ]
+        },
+        "bundle_version": {
+          "type": "string",
+          "enum": [
+            "rental.bundle.v2"
+          ]
+        },
+        "input_hash": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "request_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "request_revision": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "interpretation_revision": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "plan_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "base_plan_id": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "base_state_revision": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "horizon_start": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "horizon_end": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "dataset_version": {
+          "type": "string",
+          "minLength": 1
+        },
+        "travel_version": {
+          "type": "string",
+          "minLength": 1
+        },
+        "policy_version": {
+          "type": "string",
+          "minLength": 1
+        },
+        "operations": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/NormalizedOperation"
+          },
+          "maxItems": 4
+        },
+        "approved_job_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "snapshot": {
+          "$ref": "#/$defs/Snapshot"
+        },
+        "overrides": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/SolverOverride"
+          }
+        },
+        "id_allocations": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "plan_items",
+            "reservations",
+            "dependencies"
+          ],
+          "properties": {
+            "plan_items": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "job_id",
+                  "id"
+                ],
+                "properties": {
+                  "job_id": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "id": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                }
+              }
+            },
+            "reservations": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "rental_id",
+                  "id"
+                ],
+                "properties": {
+                  "rental_id": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "id": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                }
+              }
+            },
+            "dependencies": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "job_id",
+                  "id"
+                ],
+                "properties": {
+                  "job_id": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "id": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                }
+              }
+            }
+          }
+        },
+        "max_search_ms": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 2000
+        },
+        "max_candidates": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000
+        }
+      }
+    },
+    "Violation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "code",
+        "job_ids",
+        "asset_ids",
+        "employee_ids",
+        "interval",
+        "expected",
+        "actual"
+      ],
+      "properties": {
+        "code": {
+          "type": "string",
+          "minLength": 1
+        },
+        "job_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "asset_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "employee_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "interval": {
+          "anyOf": [
+            {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "format": "date-time"
+              }
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "expected": {},
+        "actual": {}
+      }
+    },
+    "SolverResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "status",
+        "candidate_plan",
+        "candidate_items",
+        "reservation_changes",
+        "affected_job_ids",
+        "impact_edges",
+        "violations",
+        "unresolved",
+        "objective",
+        "search_stats",
+        "input_hash",
+        "solver_version"
+      ],
+      "properties": {
+        "schema_version": {
+          "type": "string",
+          "enum": [
+            "rental.solver-result.v2"
+          ]
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "FEASIBLE",
+            "NEEDS_REVIEW",
+            "PROVEN_INFEASIBLE",
+            "NO_SOLUTION_FOUND",
+            "DATA_MISSING"
+          ]
+        },
+        "candidate_plan": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/CandidatePlan"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "candidate_items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/PlanItem"
+          }
+        },
+        "reservation_changes": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "action",
+              "old_id",
+              "reservation"
+            ],
+            "properties": {
+              "action": {
+                "type": "string",
+                "enum": [
+                  "CREATE",
+                  "REPLACE",
+                  "CANCEL"
+                ]
+              },
+              "old_id": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "reservation": {
+                "anyOf": [
+                  {
+                    "$ref": "#/$defs/Reservation"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "affected_job_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "impact_edges": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "from_job_id",
+              "to_job_id",
+              "reason",
+              "old_time",
+              "new_time"
+            ],
+            "properties": {
+              "from_job_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "to_job_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "reason": {
+                "type": "string",
+                "minLength": 1
+              },
+              "old_time": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "format": "date-time"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "new_time": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "format": "date-time"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "violations": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Violation"
+          }
+        },
+        "unresolved": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "job_id",
+              "code",
+              "details"
+            ],
+            "properties": {
+              "job_id": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "code": {
+                "type": "string",
+                "minLength": 1
+              },
+              "details": {
+                "type": "object",
+                "additionalProperties": true
+              }
+            }
+          }
+        },
+        "objective": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "search_stats": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "elapsed_ms",
+            "candidates_examined",
+            "limit_reached"
+          ],
+          "properties": {
+            "elapsed_ms": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "candidates_examined": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "limit_reached": {
+              "type": "boolean"
+            }
+          }
+        },
+        "input_hash": {
+          "type": "string"
+        },
+        "solver_version": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    }
+  }
+}
