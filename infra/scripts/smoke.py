@@ -4,7 +4,6 @@
 주의: 시작할 때 시연 데이터를 초기화한다(/admin/reset). 측정 원자료가 있으면 먼저 백업.
 표준 라이브러리만 사용 (api 이미지에 추가 설치 불필요).
 """
-import http.cookiejar
 import json
 import os
 import sys
@@ -13,23 +12,34 @@ import urllib.request
 BASE = os.environ.get("SMOKE_BASE", "http://127.0.0.1:8000/api/v1")
 USER = os.environ["SMOKE_USER"]
 PW = os.environ["SMOKE_PASSWORD"]
-jar = http.cookiejar.CookieJar()
-opener = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(jar))
+# 운영 쿠키는 Secure(HTTPS 전용)라 http://127.0.0.1 에서는 cookiejar 가 다시 보내지 않는다.
+# 서버 내부 시험이므로 Set-Cookie 값을 직접 Cookie 헤더로 넘긴다.
+COOKIE = {"value": ""}
+LAST = {"status": None, "body": None}
 
 
 def call(method, path, body=None, headers=None):
-    req = urllib.request.Request(BASE + path, method=method, headers={"Content-Type": "application/json", **(headers or {})},
+    h = {"Content-Type": "application/json", **(headers or {})}
+    if COOKIE["value"]:
+        h["Cookie"] = COOKIE["value"]
+    req = urllib.request.Request(BASE + path, method=method, headers=h,
                                  data=json.dumps(body).encode() if body is not None else None)
     try:
-        with opener.open(req, timeout=30) as r:
-            return r.status, json.loads(r.read() or b"null")
+        with urllib.request.urlopen(req, timeout=30) as r:
+            sc = r.headers.get("Set-Cookie")
+            if sc:
+                COOKIE["value"] = sc.split(";", 1)[0]
+            status, data = r.status, json.loads(r.read() or b"null")
     except urllib.error.HTTPError as e:
-        return e.code, json.loads(e.read() or b"null")
+        status, data = e.code, json.loads(e.read() or b"null")
+    LAST.update(status=status, body=data)
+    return status, data
 
 
 def step(name, cond, detail=""):
     print(("✓ " if cond else "✗ ") + name + (f"  {detail}" if detail else ""))
     if not cond:
+        print(f"  └ 마지막 응답 HTTP {LAST['status']}: {json.dumps(LAST['body'], ensure_ascii=False)[:500]}")
         sys.exit(1)
 
 
