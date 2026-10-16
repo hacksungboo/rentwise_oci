@@ -166,7 +166,8 @@ def test_missing_real_travel_is_data_missing_but_diagonal_is_optional():
     assert RealEngine().validate(s,[c.PlanItem(**p) for p in s['plan_items']]).status=='DATA_MISSING'
 
 
-def test_interpret_is_explicit_error_until_a_model_is_supplied():
+def test_interpret_is_explicit_error_until_a_model_is_supplied(monkeypatch):
+    monkeypatch.delenv('OPENAI_API_KEY', raising=False)
     inp=c.InterpretationInput(request_id='R',request_revision=1,received_at='2026-10-16T09:00:00+09:00',text='회수',
         source_customer_id=None,candidate_customers=[],candidate_items=[])
     r=RealEngine().interpret(inp)

@@ -1,7 +1,7 @@
 """The unchanged B v1 EnginePort. No extended DTO/context or DB access.
 
-Configuration reads only B's existing demo clock setting at construction.
-Planning functions receive snapshots and return B's existing Pydantic models.
+Configuration reads B's demo clock and the AI environment at construction.
+Planning is pure; interpretation requires a model and a server budget adapter.
 """
 from datetime import datetime, timezone
 import json
@@ -10,14 +10,16 @@ from typing import Callable
 from rentwise.contracts import types as c
 from rentwise.contracts.v2.schema import ContractError, timestamp
 from . import v1
+from .interpret import OpenAIInterpreter
+from .b_review import prepare_review
 
 
 class RealEngine:
     mode = 'real'
     solver_version = v1.VERSION
 
-    def __init__(self, *, as_of: str | Callable[[], str] | None = None, interpreter=None):
-        self.interpreter = interpreter
+    def __init__(self, *, as_of: str | Callable[[], str] | None = None, interpreter=None, budget=None):
+        self.interpreter = interpreter if interpreter is not None else OpenAIInterpreter.from_environment(budget=budget)
         self.as_of = as_of
         self._clock_error = False
         if as_of is None:
@@ -39,12 +41,7 @@ class RealEngine:
         return value
 
     def interpret(self, inp: c.InterpretationInput) -> c.InterpretationResult:
-        if self.interpreter is not None:
-            return self.interpreter.interpret(inp)
-        return c.InterpretationResult(status='ERROR', payload=None,
-            error=c.DomainError(code='AI_NOT_CONFIGURED', message='해석 모델이 연결되지 않았습니다. 조건을 직접 확인해 주세요.'),
-            call=c.CallMetadata(origin='AI', model_id=None, prompt_version='not-configured',
-                provider_call_id=None, attempts=0, usage=None, latency_ms=0))
+        return prepare_review(inp, self.interpreter.interpret(inp))
 
     def solve(self, inp: c.SolverInput) -> c.SolverResult:
         try:
