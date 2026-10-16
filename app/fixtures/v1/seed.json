@@ -1,0 +1,2295 @@
+{
+  "manifest": {
+    "dataset_version": "rental-dev-v1",
+    "source_type": "SYNTHETIC",
+    "author": "B (임시 개발 seed, C가 정식 seed로 교체)",
+    "reviewer": null,
+    "clock_anchor": "2026-10-16T09:00:00+09:00",
+    "timezone": "Asia/Seoul",
+    "assumptions": [
+      "실제 업체 자료 아님. 주소·좌표는 시연용",
+      "이동시간은 고정 합성 행렬(travel-v1), 실제 도로/교통 아님",
+      "창고 준비는 직원 자원을 쓰지 않는 자동 경과 구간",
+      "E2 휴식은 12:30~13:30으로 개별 설정 (명세 §8.2)"
+    ],
+    "sha256": "928eeaae59485bcc5da220f07b1f00473264cc0a4381d2ce42eac9ea2ad3a3c6"
+  },
+  "workspace": {
+    "id": "DEMO",
+    "state_revision": 7,
+    "current_plan_id": "PL-007",
+    "dataset_version": "rental-dev-v1"
+  },
+  "locations": [
+    {
+      "id": "L-W",
+      "name": "성수 중앙창고",
+      "kind": "WAREHOUSE",
+      "address": "서울 성동구 성수이로 77",
+      "lat": 37.5446,
+      "lon": 127.0557
+    },
+    {
+      "id": "L-H",
+      "name": "한빛상사",
+      "kind": "CUSTOMER",
+      "address": "서울 중구 세종대로 110",
+      "lat": 37.5663,
+      "lon": 126.9779
+    },
+    {
+      "id": "L-S",
+      "name": "새봄디자인",
+      "kind": "CUSTOMER",
+      "address": "서울 마포구 양화로 45",
+      "lat": 37.5563,
+      "lon": 126.9236
+    },
+    {
+      "id": "L-D",
+      "name": "다온회계법인",
+      "kind": "CUSTOMER",
+      "address": "서울 강남구 테헤란로 152",
+      "lat": 37.5004,
+      "lon": 127.0365
+    },
+    {
+      "id": "L-M",
+      "name": "미래교육센터",
+      "kind": "CUSTOMER",
+      "address": "서울 송파구 올림픽로 300",
+      "lat": 37.5133,
+      "lon": 127.1028
+    },
+    {
+      "id": "L-B",
+      "name": "바른법무사무소",
+      "kind": "CUSTOMER",
+      "address": "서울 서초구 서초대로 219",
+      "lat": 37.492,
+      "lon": 127.0076
+    },
+    {
+      "id": "L-J",
+      "name": "정우건축사무소",
+      "kind": "CUSTOMER",
+      "address": "서울 용산구 한강대로 92",
+      "lat": 37.5298,
+      "lon": 126.9648
+    }
+  ],
+  "customers": [
+    {
+      "id": "C-H",
+      "name": "한빛상사",
+      "location_id": "L-H",
+      "preferred_employee_id": "E1",
+      "visit_windows": [
+        {
+          "start_at": "2026-10-16T09:00:00+09:00",
+          "end_at": "2026-10-16T18:00:00+09:00"
+        },
+        {
+          "start_at": "2026-10-17T09:00:00+09:00",
+          "end_at": "2026-10-17T18:00:00+09:00"
+        },
+        {
+          "start_at": "2026-10-18T09:00:00+09:00",
+          "end_at": "2026-10-18T18:00:00+09:00"
+        },
+        {
+          "start_at": "2026-10-19T09:00:00+09:00",
+          "end_at": "2026-10-19T18:00:00+09:00"
+        },
+        {
+          "start_at": "2026-10-20T09:00:00+09:00",
+          "end_at": "2026-10-20T18:00:00+09:00"
+        },
+        {
+          "start_at": "2026-10-21T09:00:00+09:00",
+          "end_at": "2026-10-21T18:00:00+09:00"
+        },
+        {
+          "start_at": "2026-10-22T09:00:00+09:00",
+          "end_at": "2026-10-22T18:00:00+09:00"
+        }
+      ]
+    },
+    {
+      "id": "C-S",
+      "name": "새봄디자인",
+      "location_id": "L-S",
+      "preferred_employee_id": "E1",
+      "visit_windows": [
+        {
+          "start_at": "2026-10-16T09:00:00+09:00",
+          "end_at": "2026-10-16T18:00:00+09:00"
+        },
+        {
+          "start_at": "2026-10-17T09:00:00+09:00",
+          "end_at": "2026-10-17T18:00:00+09:00"
+        },
+        {
+          "start_at": "2026-10-18T09:00:00+09:00",
+          "end_at": "2026-10-18T18:00:00+09:00"
+        },
+        {
+          "start_at": "2026-10-19T09:00:00+09:00",
+          "end_at": "2026-10-19T18:00:00+09:00"
+        },
+        {
+          "start_at": "2026-10-20T09:00:00+09:00",
+          "end_at": "2026-10-20T18:00:00+09:00"
+        },
+        {
+          "start_at": "2026-10-21T09:00:00+09:00",
+          "end_at": "2026-10-21T18:00:00+09:00"
+        },
+        {
+          "start_at": "2026-10-22T09:00:00+09:00",
+          "end_at": "2026-10-22T18:00:00+09:00"
+        }
+      ]
+    },
+    {
+      "id": "C-D",
+      "name": "다온회계법인",
+      "location_id": "L-D",
+      "preferred_employee_id": "E2",
+      "visit_windows": [
+        {
+          "start_at": "2026-10-16T09:00:00+09:00",
+          "end_at": "2026-10-16T18:00:00+09:00"
+        },
+        {
+          "start_at": "2026-10-17T09:00:00+09:00",
+          "end_at": "2026-10-17T18:00:00+09:00"
+        },
+        {
+          "start_at": "2026-10-18T09:00:00+09:00",
+          "end_at": "2026-10-18T18:00:00+09:00"
+        },
+        {
+          "start_at": "2026-10-19T09:00:00+09:00",
+          "end_at": "2026-10-19T18:00:00+09:00"
+        },
+        {
+          "start_at": "2026-10-20T09:00:00+09:00",
+          "end_at": "2026-10-20T18:00:00+09:00"
+        },
+        {
+          "start_at": "2026-10-21T09:00:00+09:00",
+          "end_at": "2026-10-21T18:00:00+09:00"
+        },
+        {
+          "start_at": "2026-10-22T09:00:00+09:00",
+          "end_at": "2026-10-22T18:00:00+09:00"
+        }
+      ]
+    },
+    {
+      "id": "C-M",
+      "name": "미래교육센터",
+      "location_id": "L-M",
+      "preferred_employee_id": "E2",
+      "visit_windows": [
+        {
+          "start_at": "2026-10-16T09:00:00+09:00",
+          "end_at": "2026-10-16T18:00:00+09:00"
+        },
+        {
+          "start_at": "2026-10-17T09:00:00+09:00",
+          "end_at": "2026-10-17T18:00:00+09:00"
+        },
+        {
+          "start_at": "2026-10-18T09:00:00+09:00",
+          "end_at": "2026-10-18T18:00:00+09:00"
+        },
+        {
+          "start_at": "2026-10-19T09:00:00+09:00",
+          "end_at": "2026-10-19T18:00:00+09:00"
+        },
+        {
+          "start_at": "2026-10-20T09:00:00+09:00",
+          "end_at": "2026-10-20T18:00:00+09:00"
+        },
+        {
+          "start_at": "2026-10-21T09:00:00+09:00",
+          "end_at": "2026-10-21T18:00:00+09:00"
+        },
+        {
+          "start_at": "2026-10-22T09:00:00+09:00",
+          "end_at": "2026-10-22T18:00:00+09:00"
+        }
+      ]
+    },
+    {
+      "id": "C-B",
+      "name": "바른법무사무소",
+      "location_id": "L-B",
+      "preferred_employee_id": "E3",
+      "visit_windows": [
+        {
+          "start_at": "2026-10-16T09:00:00+09:00",
+          "end_at": "2026-10-16T18:00:00+09:00"
+        },
+        {
+          "start_at": "2026-10-17T09:00:00+09:00",
+          "end_at": "2026-10-17T18:00:00+09:00"
+        },
+        {
+          "start_at": "2026-10-18T09:00:00+09:00",
+          "end_at": "2026-10-18T18:00:00+09:00"
+        },
+        {
+          "start_at": "2026-10-19T09:00:00+09:00",
+          "end_at": "2026-10-19T18:00:00+09:00"
+        },
+        {
+          "start_at": "2026-10-20T09:00:00+09:00",
+          "end_at": "2026-10-20T18:00:00+09:00"
+        },
+        {
+          "start_at": "2026-10-21T09:00:00+09:00",
+          "end_at": "2026-10-21T18:00:00+09:00"
+        },
+        {
+          "start_at": "2026-10-22T09:00:00+09:00",
+          "end_at": "2026-10-22T18:00:00+09:00"
+        }
+      ]
+    },
+    {
+      "id": "C-J",
+      "name": "정우건축사무소",
+      "location_id": "L-J",
+      "preferred_employee_id": "E3",
+      "visit_windows": [
+        {
+          "start_at": "2026-10-16T09:00:00+09:00",
+          "end_at": "2026-10-16T18:00:00+09:00"
+        },
+        {
+          "start_at": "2026-10-17T09:00:00+09:00",
+          "end_at": "2026-10-17T18:00:00+09:00"
+        },
+        {
+          "start_at": "2026-10-18T09:00:00+09:00",
+          "end_at": "2026-10-18T18:00:00+09:00"
+        },
+        {
+          "start_at": "2026-10-19T09:00:00+09:00",
+          "end_at": "2026-10-19T18:00:00+09:00"
+        },
+        {
+          "start_at": "2026-10-20T09:00:00+09:00",
+          "end_at": "2026-10-20T18:00:00+09:00"
+        },
+        {
+          "start_at": "2026-10-21T09:00:00+09:00",
+          "end_at": "2026-10-21T18:00:00+09:00"
+        },
+        {
+          "start_at": "2026-10-22T09:00:00+09:00",
+          "end_at": "2026-10-22T18:00:00+09:00"
+        }
+      ]
+    }
+  ],
+  "items": [
+    {
+      "id": "PR-A",
+      "category": "PRINTER",
+      "model_name": "복합기 DEMO-A",
+      "service_minutes_by_kind": {
+        "DELIVERY": 15,
+        "PICKUP": 10,
+        "AS": 30,
+        "TRANSFER": 10
+      },
+      "prep_minutes": 30,
+      "direct_transfer_allowed": true
+    },
+    {
+      "id": "NB-A",
+      "category": "LAPTOP",
+      "model_name": "노트북 DEMO-14",
+      "service_minutes_by_kind": {
+        "DELIVERY": 10,
+        "PICKUP": 10,
+        "AS": 20,
+        "TRANSFER": 10
+      },
+      "prep_minutes": 20,
+      "direct_transfer_allowed": true
+    },
+    {
+      "id": "WP-A",
+      "category": "WATER_PURIFIER",
+      "model_name": "정수기 DEMO-W",
+      "service_minutes_by_kind": {
+        "DELIVERY": 30,
+        "PICKUP": 20,
+        "AS": 40,
+        "TRANSFER": 20
+      },
+      "prep_minutes": 40,
+      "direct_transfer_allowed": false
+    }
+  ],
+  "assets": [
+    {
+      "id": "P01",
+      "item_id": "PR-A",
+      "physical_state": "AT_CUSTOMER",
+      "location_id": "L-H",
+      "custody_employee_id": null,
+      "last_event_at": "2026-10-15T18:00:00+09:00",
+      "revision": 1
+    },
+    {
+      "id": "P02",
+      "item_id": "PR-A",
+      "physical_state": "READY_WAREHOUSE",
+      "location_id": "L-W",
+      "custody_employee_id": null,
+      "last_event_at": "2026-10-15T18:00:00+09:00",
+      "revision": 1
+    },
+    {
+      "id": "P03",
+      "item_id": "PR-A",
+      "physical_state": "AT_CUSTOMER",
+      "location_id": "L-D",
+      "custody_employee_id": null,
+      "last_event_at": "2026-10-15T18:00:00+09:00",
+      "revision": 1
+    },
+    {
+      "id": "P04",
+      "item_id": "PR-A",
+      "physical_state": "READY_WAREHOUSE",
+      "location_id": "L-W",
+      "custody_employee_id": null,
+      "last_event_at": "2026-10-15T18:00:00+09:00",
+      "revision": 1
+    },
+    {
+      "id": "N01",
+      "item_id": "NB-A",
+      "physical_state": "AT_CUSTOMER",
+      "location_id": "L-M",
+      "custody_employee_id": null,
+      "last_event_at": "2026-10-15T18:00:00+09:00",
+      "revision": 1
+    },
+    {
+      "id": "N02",
+      "item_id": "NB-A",
+      "physical_state": "READY_WAREHOUSE",
+      "location_id": "L-W",
+      "custody_employee_id": null,
+      "last_event_at": "2026-10-15T18:00:00+09:00",
+      "revision": 1
+    },
+    {
+      "id": "N03",
+      "item_id": "NB-A",
+      "physical_state": "READY_WAREHOUSE",
+      "location_id": "L-W",
+      "custody_employee_id": null,
+      "last_event_at": "2026-10-15T18:00:00+09:00",
+      "revision": 1
+    },
+    {
+      "id": "N04",
+      "item_id": "NB-A",
+      "physical_state": "AT_CUSTOMER",
+      "location_id": "L-J",
+      "custody_employee_id": null,
+      "last_event_at": "2026-10-15T18:00:00+09:00",
+      "revision": 1
+    },
+    {
+      "id": "W01",
+      "item_id": "WP-A",
+      "physical_state": "AT_CUSTOMER",
+      "location_id": "L-B",
+      "custody_employee_id": null,
+      "last_event_at": "2026-10-15T18:00:00+09:00",
+      "revision": 1
+    },
+    {
+      "id": "W02",
+      "item_id": "WP-A",
+      "physical_state": "AT_CUSTOMER",
+      "location_id": "L-S",
+      "custody_employee_id": null,
+      "last_event_at": "2026-10-15T18:00:00+09:00",
+      "revision": 1
+    },
+    {
+      "id": "W03",
+      "item_id": "WP-A",
+      "physical_state": "READY_WAREHOUSE",
+      "location_id": "L-W",
+      "custody_employee_id": null,
+      "last_event_at": "2026-10-15T18:00:00+09:00",
+      "revision": 1
+    },
+    {
+      "id": "W04",
+      "item_id": "WP-A",
+      "physical_state": "REPAIR",
+      "location_id": "L-W",
+      "custody_employee_id": null,
+      "last_event_at": "2026-10-15T18:00:00+09:00",
+      "revision": 1
+    }
+  ],
+  "rentals": [
+    {
+      "id": "R-H",
+      "asset_id": "P01",
+      "customer_id": "C-H",
+      "actual_start": "2026-10-15T12:00:00+09:00",
+      "actual_end": null,
+      "expected_return_at": "2026-10-16T10:10:00+09:00",
+      "status": "ACTIVE"
+    },
+    {
+      "id": "R-S2",
+      "asset_id": "P01",
+      "customer_id": "C-S",
+      "actual_start": null,
+      "actual_end": null,
+      "expected_return_at": null,
+      "status": "PLANNED"
+    },
+    {
+      "id": "R-D",
+      "asset_id": "P03",
+      "customer_id": "C-D",
+      "actual_start": "2026-10-06T10:00:00+09:00",
+      "actual_end": null,
+      "expected_return_at": "2026-10-21T10:00:00+09:00",
+      "status": "ACTIVE"
+    },
+    {
+      "id": "R-M",
+      "asset_id": "N01",
+      "customer_id": "C-M",
+      "actual_start": "2026-10-11T10:00:00+09:00",
+      "actual_end": null,
+      "expected_return_at": "2026-10-18T11:00:00+09:00",
+      "status": "ACTIVE"
+    },
+    {
+      "id": "R-J",
+      "asset_id": "N04",
+      "customer_id": "C-J",
+      "actual_start": "2026-10-09T10:00:00+09:00",
+      "actual_end": null,
+      "expected_return_at": "2026-10-16T15:30:00+09:00",
+      "status": "ACTIVE"
+    },
+    {
+      "id": "R-B",
+      "asset_id": "W01",
+      "customer_id": "C-B",
+      "actual_start": "2026-09-16T10:00:00+09:00",
+      "actual_end": null,
+      "expected_return_at": null,
+      "status": "ACTIVE"
+    },
+    {
+      "id": "R-S1",
+      "asset_id": "W02",
+      "customer_id": "C-S",
+      "actual_start": "2026-09-26T10:00:00+09:00",
+      "actual_end": null,
+      "expected_return_at": "2026-10-19T10:00:00+09:00",
+      "status": "ACTIVE"
+    }
+  ],
+  "reservations": [
+    {
+      "id": "RS-H",
+      "asset_id": "P01",
+      "rental_id": "R-H",
+      "start_at": "2026-10-15T11:00:00+09:00",
+      "end_at": "2026-10-16T11:00:00+09:00",
+      "release_job_id": "J-PREP1",
+      "plan_id": "PL-007",
+      "status": "ACTIVE",
+      "review_required": false
+    },
+    {
+      "id": "RS-S2",
+      "asset_id": "P01",
+      "rental_id": "R-S2",
+      "start_at": "2026-10-16T11:40:00+09:00",
+      "end_at": null,
+      "release_job_id": null,
+      "plan_id": "PL-007",
+      "status": "ACTIVE",
+      "review_required": false
+    },
+    {
+      "id": "RS-D",
+      "asset_id": "P03",
+      "rental_id": "R-D",
+      "start_at": "2026-10-06T09:00:00+09:00",
+      "end_at": "2026-10-21T11:05:00+09:00",
+      "release_job_id": "J-PREP4",
+      "plan_id": "PL-007",
+      "status": "ACTIVE",
+      "review_required": false
+    },
+    {
+      "id": "RS-M",
+      "asset_id": "N01",
+      "rental_id": "R-M",
+      "start_at": "2026-10-11T09:00:00+09:00",
+      "end_at": null,
+      "release_job_id": null,
+      "plan_id": "PL-007",
+      "status": "ACTIVE",
+      "review_required": false
+    },
+    {
+      "id": "RS-J",
+      "asset_id": "N04",
+      "rental_id": "R-J",
+      "start_at": "2026-10-09T09:00:00+09:00",
+      "end_at": "2026-10-16T16:20:00+09:00",
+      "release_job_id": "J-PREP2",
+      "plan_id": "PL-007",
+      "status": "ACTIVE",
+      "review_required": false
+    },
+    {
+      "id": "RS-B",
+      "asset_id": "W01",
+      "rental_id": "R-B",
+      "start_at": "2026-09-16T09:00:00+09:00",
+      "end_at": null,
+      "release_job_id": null,
+      "plan_id": "PL-007",
+      "status": "ACTIVE",
+      "review_required": false
+    },
+    {
+      "id": "RS-S1",
+      "asset_id": "W02",
+      "rental_id": "R-S1",
+      "start_at": "2026-09-26T09:00:00+09:00",
+      "end_at": "2026-10-19T11:20:00+09:00",
+      "release_job_id": "J-PREP3",
+      "plan_id": "PL-007",
+      "status": "ACTIVE",
+      "review_required": false
+    },
+    {
+      "id": "RS-N02",
+      "asset_id": "N02",
+      "rental_id": null,
+      "start_at": "2026-10-16T10:40:00+09:00",
+      "end_at": null,
+      "release_job_id": null,
+      "plan_id": "PL-007",
+      "status": "ACTIVE",
+      "review_required": false
+    },
+    {
+      "id": "RS-W03",
+      "asset_id": "W03",
+      "rental_id": null,
+      "start_at": "2026-10-17T09:35:00+09:00",
+      "end_at": null,
+      "release_job_id": null,
+      "plan_id": "PL-007",
+      "status": "ACTIVE",
+      "review_required": false
+    },
+    {
+      "id": "RS-P04",
+      "asset_id": "P04",
+      "rental_id": null,
+      "start_at": "2026-10-19T13:40:00+09:00",
+      "end_at": null,
+      "release_job_id": null,
+      "plan_id": "PL-007",
+      "status": "ACTIVE",
+      "review_required": false
+    }
+  ],
+  "employees": [
+    {
+      "id": "E1",
+      "name": "김현우",
+      "active": true,
+      "skills": [
+        {
+          "task_kind": "DELIVERY",
+          "item_category": "PRINTER"
+        },
+        {
+          "task_kind": "DELIVERY",
+          "item_category": "LAPTOP"
+        },
+        {
+          "task_kind": "DELIVERY",
+          "item_category": "WATER_PURIFIER"
+        },
+        {
+          "task_kind": "PICKUP",
+          "item_category": "PRINTER"
+        },
+        {
+          "task_kind": "PICKUP",
+          "item_category": "LAPTOP"
+        },
+        {
+          "task_kind": "PICKUP",
+          "item_category": "WATER_PURIFIER"
+        },
+        {
+          "task_kind": "AS",
+          "item_category": "PRINTER"
+        },
+        {
+          "task_kind": "AS",
+          "item_category": "LAPTOP"
+        },
+        {
+          "task_kind": "AS",
+          "item_category": "WATER_PURIFIER"
+        },
+        {
+          "task_kind": "TRANSFER",
+          "item_category": "PRINTER"
+        },
+        {
+          "task_kind": "TRANSFER",
+          "item_category": "LAPTOP"
+        },
+        {
+          "task_kind": "TRANSFER",
+          "item_category": "WATER_PURIFIER"
+        }
+      ]
+    },
+    {
+      "id": "E2",
+      "name": "이서연",
+      "active": true,
+      "skills": [
+        {
+          "task_kind": "DELIVERY",
+          "item_category": "PRINTER"
+        },
+        {
+          "task_kind": "DELIVERY",
+          "item_category": "LAPTOP"
+        },
+        {
+          "task_kind": "DELIVERY",
+          "item_category": "WATER_PURIFIER"
+        },
+        {
+          "task_kind": "PICKUP",
+          "item_category": "PRINTER"
+        },
+        {
+          "task_kind": "PICKUP",
+          "item_category": "LAPTOP"
+        },
+        {
+          "task_kind": "PICKUP",
+          "item_category": "WATER_PURIFIER"
+        },
+        {
+          "task_kind": "AS",
+          "item_category": "PRINTER"
+        },
+        {
+          "task_kind": "AS",
+          "item_category": "LAPTOP"
+        },
+        {
+          "task_kind": "AS",
+          "item_category": "WATER_PURIFIER"
+        },
+        {
+          "task_kind": "TRANSFER",
+          "item_category": "PRINTER"
+        },
+        {
+          "task_kind": "TRANSFER",
+          "item_category": "LAPTOP"
+        },
+        {
+          "task_kind": "TRANSFER",
+          "item_category": "WATER_PURIFIER"
+        }
+      ]
+    },
+    {
+      "id": "E3",
+      "name": "박준호",
+      "active": true,
+      "skills": [
+        {
+          "task_kind": "DELIVERY",
+          "item_category": "PRINTER"
+        },
+        {
+          "task_kind": "DELIVERY",
+          "item_category": "LAPTOP"
+        },
+        {
+          "task_kind": "DELIVERY",
+          "item_category": "WATER_PURIFIER"
+        },
+        {
+          "task_kind": "PICKUP",
+          "item_category": "PRINTER"
+        },
+        {
+          "task_kind": "PICKUP",
+          "item_category": "LAPTOP"
+        },
+        {
+          "task_kind": "PICKUP",
+          "item_category": "WATER_PURIFIER"
+        },
+        {
+          "task_kind": "AS",
+          "item_category": "PRINTER"
+        },
+        {
+          "task_kind": "AS",
+          "item_category": "LAPTOP"
+        },
+        {
+          "task_kind": "AS",
+          "item_category": "WATER_PURIFIER"
+        },
+        {
+          "task_kind": "TRANSFER",
+          "item_category": "PRINTER"
+        },
+        {
+          "task_kind": "TRANSFER",
+          "item_category": "LAPTOP"
+        },
+        {
+          "task_kind": "TRANSFER",
+          "item_category": "WATER_PURIFIER"
+        }
+      ]
+    }
+  ],
+  "shifts": [
+    {
+      "id": "SH-E1-0",
+      "employee_id": "E1",
+      "start_at": "2026-10-16T09:00:00+09:00",
+      "end_at": "2026-10-16T18:00:00+09:00",
+      "start_location_id": "L-W",
+      "end_location_id": "L-W",
+      "break_windows": [
+        {
+          "start_at": "2026-10-16T13:00:00+09:00",
+          "end_at": "2026-10-16T14:00:00+09:00"
+        }
+      ]
+    },
+    {
+      "id": "SH-E1-1",
+      "employee_id": "E1",
+      "start_at": "2026-10-17T09:00:00+09:00",
+      "end_at": "2026-10-17T18:00:00+09:00",
+      "start_location_id": "L-W",
+      "end_location_id": "L-W",
+      "break_windows": [
+        {
+          "start_at": "2026-10-17T13:00:00+09:00",
+          "end_at": "2026-10-17T14:00:00+09:00"
+        }
+      ]
+    },
+    {
+      "id": "SH-E1-2",
+      "employee_id": "E1",
+      "start_at": "2026-10-18T09:00:00+09:00",
+      "end_at": "2026-10-18T18:00:00+09:00",
+      "start_location_id": "L-W",
+      "end_location_id": "L-W",
+      "break_windows": [
+        {
+          "start_at": "2026-10-18T13:00:00+09:00",
+          "end_at": "2026-10-18T14:00:00+09:00"
+        }
+      ]
+    },
+    {
+      "id": "SH-E1-3",
+      "employee_id": "E1",
+      "start_at": "2026-10-19T09:00:00+09:00",
+      "end_at": "2026-10-19T18:00:00+09:00",
+      "start_location_id": "L-W",
+      "end_location_id": "L-W",
+      "break_windows": [
+        {
+          "start_at": "2026-10-19T13:00:00+09:00",
+          "end_at": "2026-10-19T14:00:00+09:00"
+        }
+      ]
+    },
+    {
+      "id": "SH-E1-4",
+      "employee_id": "E1",
+      "start_at": "2026-10-20T09:00:00+09:00",
+      "end_at": "2026-10-20T18:00:00+09:00",
+      "start_location_id": "L-W",
+      "end_location_id": "L-W",
+      "break_windows": [
+        {
+          "start_at": "2026-10-20T13:00:00+09:00",
+          "end_at": "2026-10-20T14:00:00+09:00"
+        }
+      ]
+    },
+    {
+      "id": "SH-E1-5",
+      "employee_id": "E1",
+      "start_at": "2026-10-21T09:00:00+09:00",
+      "end_at": "2026-10-21T18:00:00+09:00",
+      "start_location_id": "L-W",
+      "end_location_id": "L-W",
+      "break_windows": [
+        {
+          "start_at": "2026-10-21T13:00:00+09:00",
+          "end_at": "2026-10-21T14:00:00+09:00"
+        }
+      ]
+    },
+    {
+      "id": "SH-E1-6",
+      "employee_id": "E1",
+      "start_at": "2026-10-22T09:00:00+09:00",
+      "end_at": "2026-10-22T18:00:00+09:00",
+      "start_location_id": "L-W",
+      "end_location_id": "L-W",
+      "break_windows": [
+        {
+          "start_at": "2026-10-22T13:00:00+09:00",
+          "end_at": "2026-10-22T14:00:00+09:00"
+        }
+      ]
+    },
+    {
+      "id": "SH-E2-0",
+      "employee_id": "E2",
+      "start_at": "2026-10-16T09:00:00+09:00",
+      "end_at": "2026-10-16T18:00:00+09:00",
+      "start_location_id": "L-W",
+      "end_location_id": "L-W",
+      "break_windows": [
+        {
+          "start_at": "2026-10-16T12:30:00+09:00",
+          "end_at": "2026-10-16T13:30:00+09:00"
+        }
+      ]
+    },
+    {
+      "id": "SH-E2-1",
+      "employee_id": "E2",
+      "start_at": "2026-10-17T09:00:00+09:00",
+      "end_at": "2026-10-17T18:00:00+09:00",
+      "start_location_id": "L-W",
+      "end_location_id": "L-W",
+      "break_windows": [
+        {
+          "start_at": "2026-10-17T12:30:00+09:00",
+          "end_at": "2026-10-17T13:30:00+09:00"
+        }
+      ]
+    },
+    {
+      "id": "SH-E2-2",
+      "employee_id": "E2",
+      "start_at": "2026-10-18T09:00:00+09:00",
+      "end_at": "2026-10-18T18:00:00+09:00",
+      "start_location_id": "L-W",
+      "end_location_id": "L-W",
+      "break_windows": [
+        {
+          "start_at": "2026-10-18T12:30:00+09:00",
+          "end_at": "2026-10-18T13:30:00+09:00"
+        }
+      ]
+    },
+    {
+      "id": "SH-E2-3",
+      "employee_id": "E2",
+      "start_at": "2026-10-19T09:00:00+09:00",
+      "end_at": "2026-10-19T18:00:00+09:00",
+      "start_location_id": "L-W",
+      "end_location_id": "L-W",
+      "break_windows": [
+        {
+          "start_at": "2026-10-19T12:30:00+09:00",
+          "end_at": "2026-10-19T13:30:00+09:00"
+        }
+      ]
+    },
+    {
+      "id": "SH-E2-4",
+      "employee_id": "E2",
+      "start_at": "2026-10-20T09:00:00+09:00",
+      "end_at": "2026-10-20T18:00:00+09:00",
+      "start_location_id": "L-W",
+      "end_location_id": "L-W",
+      "break_windows": [
+        {
+          "start_at": "2026-10-20T12:30:00+09:00",
+          "end_at": "2026-10-20T13:30:00+09:00"
+        }
+      ]
+    },
+    {
+      "id": "SH-E2-5",
+      "employee_id": "E2",
+      "start_at": "2026-10-21T09:00:00+09:00",
+      "end_at": "2026-10-21T18:00:00+09:00",
+      "start_location_id": "L-W",
+      "end_location_id": "L-W",
+      "break_windows": [
+        {
+          "start_at": "2026-10-21T12:30:00+09:00",
+          "end_at": "2026-10-21T13:30:00+09:00"
+        }
+      ]
+    },
+    {
+      "id": "SH-E2-6",
+      "employee_id": "E2",
+      "start_at": "2026-10-22T09:00:00+09:00",
+      "end_at": "2026-10-22T18:00:00+09:00",
+      "start_location_id": "L-W",
+      "end_location_id": "L-W",
+      "break_windows": [
+        {
+          "start_at": "2026-10-22T12:30:00+09:00",
+          "end_at": "2026-10-22T13:30:00+09:00"
+        }
+      ]
+    },
+    {
+      "id": "SH-E3-0",
+      "employee_id": "E3",
+      "start_at": "2026-10-16T09:00:00+09:00",
+      "end_at": "2026-10-16T18:00:00+09:00",
+      "start_location_id": "L-W",
+      "end_location_id": "L-W",
+      "break_windows": [
+        {
+          "start_at": "2026-10-16T13:00:00+09:00",
+          "end_at": "2026-10-16T14:00:00+09:00"
+        }
+      ]
+    },
+    {
+      "id": "SH-E3-1",
+      "employee_id": "E3",
+      "start_at": "2026-10-17T09:00:00+09:00",
+      "end_at": "2026-10-17T18:00:00+09:00",
+      "start_location_id": "L-W",
+      "end_location_id": "L-W",
+      "break_windows": [
+        {
+          "start_at": "2026-10-17T13:00:00+09:00",
+          "end_at": "2026-10-17T14:00:00+09:00"
+        }
+      ]
+    },
+    {
+      "id": "SH-E3-2",
+      "employee_id": "E3",
+      "start_at": "2026-10-18T09:00:00+09:00",
+      "end_at": "2026-10-18T18:00:00+09:00",
+      "start_location_id": "L-W",
+      "end_location_id": "L-W",
+      "break_windows": [
+        {
+          "start_at": "2026-10-18T13:00:00+09:00",
+          "end_at": "2026-10-18T14:00:00+09:00"
+        }
+      ]
+    },
+    {
+      "id": "SH-E3-3",
+      "employee_id": "E3",
+      "start_at": "2026-10-19T09:00:00+09:00",
+      "end_at": "2026-10-19T18:00:00+09:00",
+      "start_location_id": "L-W",
+      "end_location_id": "L-W",
+      "break_windows": [
+        {
+          "start_at": "2026-10-19T13:00:00+09:00",
+          "end_at": "2026-10-19T14:00:00+09:00"
+        }
+      ]
+    },
+    {
+      "id": "SH-E3-4",
+      "employee_id": "E3",
+      "start_at": "2026-10-20T09:00:00+09:00",
+      "end_at": "2026-10-20T18:00:00+09:00",
+      "start_location_id": "L-W",
+      "end_location_id": "L-W",
+      "break_windows": [
+        {
+          "start_at": "2026-10-20T13:00:00+09:00",
+          "end_at": "2026-10-20T14:00:00+09:00"
+        }
+      ]
+    },
+    {
+      "id": "SH-E3-5",
+      "employee_id": "E3",
+      "start_at": "2026-10-21T09:00:00+09:00",
+      "end_at": "2026-10-21T18:00:00+09:00",
+      "start_location_id": "L-W",
+      "end_location_id": "L-W",
+      "break_windows": [
+        {
+          "start_at": "2026-10-21T13:00:00+09:00",
+          "end_at": "2026-10-21T14:00:00+09:00"
+        }
+      ]
+    },
+    {
+      "id": "SH-E3-6",
+      "employee_id": "E3",
+      "start_at": "2026-10-22T09:00:00+09:00",
+      "end_at": "2026-10-22T18:00:00+09:00",
+      "start_location_id": "L-W",
+      "end_location_id": "L-W",
+      "break_windows": [
+        {
+          "start_at": "2026-10-22T13:00:00+09:00",
+          "end_at": "2026-10-22T14:00:00+09:00"
+        }
+      ]
+    }
+  ],
+  "travel_times": [
+    {
+      "from_id": "L-W",
+      "to_id": "L-H",
+      "minutes": 20,
+      "source": "SYNTHETIC_FIXED",
+      "version": "travel-v1"
+    },
+    {
+      "from_id": "L-W",
+      "to_id": "L-S",
+      "minutes": 20,
+      "source": "SYNTHETIC_FIXED",
+      "version": "travel-v1"
+    },
+    {
+      "from_id": "L-W",
+      "to_id": "L-D",
+      "minutes": 20,
+      "source": "SYNTHETIC_FIXED",
+      "version": "travel-v1"
+    },
+    {
+      "from_id": "L-W",
+      "to_id": "L-M",
+      "minutes": 25,
+      "source": "SYNTHETIC_FIXED",
+      "version": "travel-v1"
+    },
+    {
+      "from_id": "L-W",
+      "to_id": "L-B",
+      "minutes": 20,
+      "source": "SYNTHETIC_FIXED",
+      "version": "travel-v1"
+    },
+    {
+      "from_id": "L-W",
+      "to_id": "L-J",
+      "minutes": 20,
+      "source": "SYNTHETIC_FIXED",
+      "version": "travel-v1"
+    },
+    {
+      "from_id": "L-H",
+      "to_id": "L-W",
+      "minutes": 20,
+      "source": "SYNTHETIC_FIXED",
+      "version": "travel-v1"
+    },
+    {
+      "from_id": "L-H",
+      "to_id": "L-S",
+      "minutes": 25,
+      "source": "SYNTHETIC_FIXED",
+      "version": "travel-v1"
+    },
+    {
+      "from_id": "L-H",
+      "to_id": "L-D",
+      "minutes": 30,
+      "source": "SYNTHETIC_FIXED",
+      "version": "travel-v1"
+    },
+    {
+      "from_id": "L-H",
+      "to_id": "L-M",
+      "minutes": 35,
+      "source": "SYNTHETIC_FIXED",
+      "version": "travel-v1"
+    },
+    {
+      "from_id": "L-H",
+      "to_id": "L-B",
+      "minutes": 30,
+      "source": "SYNTHETIC_FIXED",
+      "version": "travel-v1"
+    },
+    {
+      "from_id": "L-H",
+      "to_id": "L-J",
+      "minutes": 15,
+      "source": "SYNTHETIC_FIXED",
+      "version": "travel-v1"
+    },
+    {
+      "from_id": "L-S",
+      "to_id": "L-W",
+      "minutes": 20,
+      "source": "SYNTHETIC_FIXED",
+      "version": "travel-v1"
+    },
+    {
+      "from_id": "L-S",
+      "to_id": "L-H",
+      "minutes": 25,
+      "source": "SYNTHETIC_FIXED",
+      "version": "travel-v1"
+    },
+    {
+      "from_id": "L-S",
+      "to_id": "L-D",
+      "minutes": 35,
+      "source": "SYNTHETIC_FIXED",
+      "version": "travel-v1"
+    },
+    {
+      "from_id": "L-S",
+      "to_id": "L-M",
+      "minutes": 45,
+      "source": "SYNTHETIC_FIXED",
+      "version": "travel-v1"
+    },
+    {
+      "from_id": "L-S",
+      "to_id": "L-B",
+      "minutes": 35,
+      "source": "SYNTHETIC_FIXED",
+      "version": "travel-v1"
+    },
+    {
+      "from_id": "L-S",
+      "to_id": "L-J",
+      "minutes": 25,
+      "source": "SYNTHETIC_FIXED",
+      "version": "travel-v1"
+    },
+    {
+      "from_id": "L-D",
+      "to_id": "L-W",
+      "minutes": 25,
+      "source": "SYNTHETIC_FIXED",
+      "version": "travel-v1"
+    },
+    {
+      "from_id": "L-D",
+      "to_id": "L-H",
+      "minutes": 30,
+      "source": "SYNTHETIC_FIXED",
+      "version": "travel-v1"
+    },
+    {
+      "from_id": "L-D",
+      "to_id": "L-S",
+      "minutes": 35,
+      "source": "SYNTHETIC_FIXED",
+      "version": "travel-v1"
+    },
+    {
+      "from_id": "L-D",
+      "to_id": "L-M",
+      "minutes": 20,
+      "source": "SYNTHETIC_FIXED",
+      "version": "travel-v1"
+    },
+    {
+      "from_id": "L-D",
+      "to_id": "L-B",
+      "minutes": 15,
+      "source": "SYNTHETIC_FIXED",
+      "version": "travel-v1"
+    },
+    {
+      "from_id": "L-D",
+      "to_id": "L-J",
+      "minutes": 25,
+      "source": "SYNTHETIC_FIXED",
+      "version": "travel-v1"
+    },
+    {
+      "from_id": "L-M",
+      "to_id": "L-W",
+      "minutes": 30,
+      "source": "SYNTHETIC_FIXED",
+      "version": "travel-v1"
+    },
+    {
+      "from_id": "L-M",
+      "to_id": "L-H",
+      "minutes": 35,
+      "source": "SYNTHETIC_FIXED",
+      "version": "travel-v1"
+    },
+    {
+      "from_id": "L-M",
+      "to_id": "L-S",
+      "minutes": 45,
+      "source": "SYNTHETIC_FIXED",
+      "version": "travel-v1"
+    },
+    {
+      "from_id": "L-M",
+      "to_id": "L-D",
+      "minutes": 25,
+      "source": "SYNTHETIC_FIXED",
+      "version": "travel-v1"
+    },
+    {
+      "from_id": "L-M",
+      "to_id": "L-B",
+      "minutes": 25,
+      "source": "SYNTHETIC_FIXED",
+      "version": "travel-v1"
+    },
+    {
+      "from_id": "L-M",
+      "to_id": "L-J",
+      "minutes": 35,
+      "source": "SYNTHETIC_FIXED",
+      "version": "travel-v1"
+    },
+    {
+      "from_id": "L-B",
+      "to_id": "L-W",
+      "minutes": 20,
+      "source": "SYNTHETIC_FIXED",
+      "version": "travel-v1"
+    },
+    {
+      "from_id": "L-B",
+      "to_id": "L-H",
+      "minutes": 30,
+      "source": "SYNTHETIC_FIXED",
+      "version": "travel-v1"
+    },
+    {
+      "from_id": "L-B",
+      "to_id": "L-S",
+      "minutes": 35,
+      "source": "SYNTHETIC_FIXED",
+      "version": "travel-v1"
+    },
+    {
+      "from_id": "L-B",
+      "to_id": "L-D",
+      "minutes": 15,
+      "source": "SYNTHETIC_FIXED",
+      "version": "travel-v1"
+    },
+    {
+      "from_id": "L-B",
+      "to_id": "L-M",
+      "minutes": 25,
+      "source": "SYNTHETIC_FIXED",
+      "version": "travel-v1"
+    },
+    {
+      "from_id": "L-B",
+      "to_id": "L-J",
+      "minutes": 20,
+      "source": "SYNTHETIC_FIXED",
+      "version": "travel-v1"
+    },
+    {
+      "from_id": "L-J",
+      "to_id": "L-W",
+      "minutes": 20,
+      "source": "SYNTHETIC_FIXED",
+      "version": "travel-v1"
+    },
+    {
+      "from_id": "L-J",
+      "to_id": "L-H",
+      "minutes": 20,
+      "source": "SYNTHETIC_FIXED",
+      "version": "travel-v1"
+    },
+    {
+      "from_id": "L-J",
+      "to_id": "L-S",
+      "minutes": 25,
+      "source": "SYNTHETIC_FIXED",
+      "version": "travel-v1"
+    },
+    {
+      "from_id": "L-J",
+      "to_id": "L-D",
+      "minutes": 25,
+      "source": "SYNTHETIC_FIXED",
+      "version": "travel-v1"
+    },
+    {
+      "from_id": "L-J",
+      "to_id": "L-M",
+      "minutes": 35,
+      "source": "SYNTHETIC_FIXED",
+      "version": "travel-v1"
+    },
+    {
+      "from_id": "L-J",
+      "to_id": "L-B",
+      "minutes": 20,
+      "source": "SYNTHETIC_FIXED",
+      "version": "travel-v1"
+    }
+  ],
+  "jobs": [
+    {
+      "id": "J-PICK1",
+      "request_id": null,
+      "kind": "PICKUP",
+      "operation": "CREATE",
+      "asset_ids": [
+        "P01"
+      ],
+      "item_id": "PR-A",
+      "quantity": 1,
+      "from_id": "L-H",
+      "to_id": "L-W",
+      "window_start": "2026-10-16T10:00:00+09:00",
+      "window_end": "2026-10-16T10:30:00+09:00",
+      "due_at": "2026-10-16T12:00:00+09:00",
+      "rental_end_at": null,
+      "priority": "NORMAL",
+      "status": "ASSIGNED",
+      "revision": 1
+    },
+    {
+      "id": "J-PREP1",
+      "request_id": null,
+      "kind": "PREP",
+      "operation": "CREATE",
+      "asset_ids": [
+        "P01"
+      ],
+      "item_id": "PR-A",
+      "quantity": 1,
+      "from_id": "L-W",
+      "to_id": "L-W",
+      "window_start": "2026-10-16T10:30:00+09:00",
+      "window_end": "2026-10-16T11:00:00+09:00",
+      "due_at": "2026-10-16T11:00:00+09:00",
+      "rental_end_at": null,
+      "priority": "NORMAL",
+      "status": "ASSIGNED",
+      "revision": 1
+    },
+    {
+      "id": "J-DEL1",
+      "request_id": null,
+      "kind": "DELIVERY",
+      "operation": "CREATE",
+      "asset_ids": [
+        "P01"
+      ],
+      "item_id": "PR-A",
+      "quantity": 1,
+      "from_id": "L-W",
+      "to_id": "L-S",
+      "window_start": "2026-10-16T12:00:00+09:00",
+      "window_end": "2026-10-16T12:15:00+09:00",
+      "due_at": "2026-10-16T12:15:00+09:00",
+      "rental_end_at": null,
+      "priority": "NORMAL",
+      "status": "ASSIGNED",
+      "revision": 1
+    },
+    {
+      "id": "J-AS1",
+      "request_id": null,
+      "kind": "AS",
+      "operation": "CREATE",
+      "asset_ids": [
+        "W01"
+      ],
+      "item_id": "WP-A",
+      "quantity": 1,
+      "from_id": "L-B",
+      "to_id": "L-B",
+      "window_start": "2026-10-16T10:00:00+09:00",
+      "window_end": "2026-10-16T11:00:00+09:00",
+      "due_at": "2026-10-16T11:00:00+09:00",
+      "rental_end_at": null,
+      "priority": "HIGH",
+      "status": "ASSIGNED",
+      "revision": 1
+    },
+    {
+      "id": "J-DEL2",
+      "request_id": null,
+      "kind": "DELIVERY",
+      "operation": "CREATE",
+      "asset_ids": [
+        "N02"
+      ],
+      "item_id": "NB-A",
+      "quantity": 1,
+      "from_id": "L-W",
+      "to_id": "L-D",
+      "window_start": "2026-10-16T11:00:00+09:00",
+      "window_end": "2026-10-16T11:30:00+09:00",
+      "due_at": "2026-10-16T11:30:00+09:00",
+      "rental_end_at": null,
+      "priority": "NORMAL",
+      "status": "ASSIGNED",
+      "revision": 1
+    },
+    {
+      "id": "J-PICK2",
+      "request_id": null,
+      "kind": "PICKUP",
+      "operation": "CREATE",
+      "asset_ids": [
+        "N04"
+      ],
+      "item_id": "NB-A",
+      "quantity": 1,
+      "from_id": "L-J",
+      "to_id": "L-W",
+      "window_start": "2026-10-16T15:30:00+09:00",
+      "window_end": "2026-10-16T16:00:00+09:00",
+      "due_at": "2026-10-16T17:00:00+09:00",
+      "rental_end_at": null,
+      "priority": "NORMAL",
+      "status": "ASSIGNED",
+      "revision": 1
+    },
+    {
+      "id": "J-PREP2",
+      "request_id": null,
+      "kind": "PREP",
+      "operation": "CREATE",
+      "asset_ids": [
+        "N04"
+      ],
+      "item_id": "NB-A",
+      "quantity": 1,
+      "from_id": "L-W",
+      "to_id": "L-W",
+      "window_start": "2026-10-16T16:00:00+09:00",
+      "window_end": "2026-10-16T16:20:00+09:00",
+      "due_at": "2026-10-16T16:20:00+09:00",
+      "rental_end_at": null,
+      "priority": "NORMAL",
+      "status": "ASSIGNED",
+      "revision": 1
+    },
+    {
+      "id": "J-DEL3",
+      "request_id": null,
+      "kind": "DELIVERY",
+      "operation": "CREATE",
+      "asset_ids": [
+        "W03"
+      ],
+      "item_id": "WP-A",
+      "quantity": 1,
+      "from_id": "L-W",
+      "to_id": "L-M",
+      "window_start": "2026-10-17T10:00:00+09:00",
+      "window_end": "2026-10-17T11:00:00+09:00",
+      "due_at": "2026-10-17T11:00:00+09:00",
+      "rental_end_at": null,
+      "priority": "NORMAL",
+      "status": "ASSIGNED",
+      "revision": 1
+    },
+    {
+      "id": "J-AS2",
+      "request_id": null,
+      "kind": "AS",
+      "operation": "CREATE",
+      "asset_ids": [
+        "P03"
+      ],
+      "item_id": "PR-A",
+      "quantity": 1,
+      "from_id": "L-D",
+      "to_id": "L-D",
+      "window_start": "2026-10-17T14:00:00+09:00",
+      "window_end": "2026-10-17T15:00:00+09:00",
+      "due_at": "2026-10-17T15:00:00+09:00",
+      "rental_end_at": null,
+      "priority": "HIGH",
+      "status": "ASSIGNED",
+      "revision": 1
+    },
+    {
+      "id": "J-TR1",
+      "request_id": null,
+      "kind": "TRANSFER",
+      "operation": "CREATE",
+      "asset_ids": [
+        "N01"
+      ],
+      "item_id": "NB-A",
+      "quantity": 1,
+      "from_id": "L-M",
+      "to_id": "L-H",
+      "window_start": "2026-10-18T11:00:00+09:00",
+      "window_end": "2026-10-18T12:00:00+09:00",
+      "due_at": "2026-10-18T12:00:00+09:00",
+      "rental_end_at": null,
+      "priority": "NORMAL",
+      "status": "ASSIGNED",
+      "revision": 1
+    },
+    {
+      "id": "J-PICK3",
+      "request_id": null,
+      "kind": "PICKUP",
+      "operation": "CREATE",
+      "asset_ids": [
+        "W02"
+      ],
+      "item_id": "WP-A",
+      "quantity": 1,
+      "from_id": "L-S",
+      "to_id": "L-W",
+      "window_start": "2026-10-19T10:00:00+09:00",
+      "window_end": "2026-10-19T11:00:00+09:00",
+      "due_at": "2026-10-19T12:00:00+09:00",
+      "rental_end_at": null,
+      "priority": "NORMAL",
+      "status": "ASSIGNED",
+      "revision": 1
+    },
+    {
+      "id": "J-PREP3",
+      "request_id": null,
+      "kind": "PREP",
+      "operation": "CREATE",
+      "asset_ids": [
+        "W02"
+      ],
+      "item_id": "WP-A",
+      "quantity": 1,
+      "from_id": "L-W",
+      "to_id": "L-W",
+      "window_start": "2026-10-19T10:40:00+09:00",
+      "window_end": "2026-10-19T11:20:00+09:00",
+      "due_at": "2026-10-19T11:20:00+09:00",
+      "rental_end_at": null,
+      "priority": "NORMAL",
+      "status": "ASSIGNED",
+      "revision": 1
+    },
+    {
+      "id": "J-DEL4",
+      "request_id": null,
+      "kind": "DELIVERY",
+      "operation": "CREATE",
+      "asset_ids": [
+        "P04"
+      ],
+      "item_id": "PR-A",
+      "quantity": 1,
+      "from_id": "L-W",
+      "to_id": "L-J",
+      "window_start": "2026-10-19T14:00:00+09:00",
+      "window_end": "2026-10-19T14:30:00+09:00",
+      "due_at": "2026-10-19T14:30:00+09:00",
+      "rental_end_at": null,
+      "priority": "NORMAL",
+      "status": "ASSIGNED",
+      "revision": 1
+    },
+    {
+      "id": "J-AS3",
+      "request_id": null,
+      "kind": "AS",
+      "operation": "CREATE",
+      "asset_ids": [
+        "W01"
+      ],
+      "item_id": "WP-A",
+      "quantity": 1,
+      "from_id": "L-B",
+      "to_id": "L-B",
+      "window_start": "2026-10-20T15:00:00+09:00",
+      "window_end": "2026-10-20T16:00:00+09:00",
+      "due_at": "2026-10-20T16:00:00+09:00",
+      "rental_end_at": null,
+      "priority": "HIGH",
+      "status": "ASSIGNED",
+      "revision": 1
+    },
+    {
+      "id": "J-PICK4",
+      "request_id": null,
+      "kind": "PICKUP",
+      "operation": "CREATE",
+      "asset_ids": [
+        "P03"
+      ],
+      "item_id": "PR-A",
+      "quantity": 1,
+      "from_id": "L-D",
+      "to_id": "L-W",
+      "window_start": "2026-10-21T10:00:00+09:00",
+      "window_end": "2026-10-21T11:00:00+09:00",
+      "due_at": "2026-10-21T12:00:00+09:00",
+      "rental_end_at": null,
+      "priority": "NORMAL",
+      "status": "ASSIGNED",
+      "revision": 1
+    },
+    {
+      "id": "J-PREP4",
+      "request_id": null,
+      "kind": "PREP",
+      "operation": "CREATE",
+      "asset_ids": [
+        "P03"
+      ],
+      "item_id": "PR-A",
+      "quantity": 1,
+      "from_id": "L-W",
+      "to_id": "L-W",
+      "window_start": "2026-10-21T10:35:00+09:00",
+      "window_end": "2026-10-21T11:05:00+09:00",
+      "due_at": "2026-10-21T11:05:00+09:00",
+      "rental_end_at": null,
+      "priority": "NORMAL",
+      "status": "ASSIGNED",
+      "revision": 1
+    }
+  ],
+  "dependencies": [
+    {
+      "id": "D-J-PICK1",
+      "predecessor_job_id": "J-PICK1",
+      "successor_job_id": "J-PREP1",
+      "minimum_gap_minutes": 0,
+      "reason": "RETURN_TO_PREP"
+    },
+    {
+      "id": "D-J-PICK2",
+      "predecessor_job_id": "J-PICK2",
+      "successor_job_id": "J-PREP2",
+      "minimum_gap_minutes": 0,
+      "reason": "RETURN_TO_PREP"
+    },
+    {
+      "id": "D-J-PICK3",
+      "predecessor_job_id": "J-PICK3",
+      "successor_job_id": "J-PREP3",
+      "minimum_gap_minutes": 0,
+      "reason": "RETURN_TO_PREP"
+    },
+    {
+      "id": "D-J-PICK4",
+      "predecessor_job_id": "J-PICK4",
+      "successor_job_id": "J-PREP4",
+      "minimum_gap_minutes": 0,
+      "reason": "RETURN_TO_PREP"
+    },
+    {
+      "id": "D-PREP1-DEL1",
+      "predecessor_job_id": "J-PREP1",
+      "successor_job_id": "J-DEL1",
+      "minimum_gap_minutes": 0,
+      "reason": "ASSET_REUSE"
+    }
+  ],
+  "plan": {
+    "id": "PL-007",
+    "revision": 1,
+    "base_plan_id": null,
+    "base_state_revision": 6,
+    "request_id": null,
+    "interpretation_revision": null,
+    "status": "CONFIRMED",
+    "solver_version": "seed",
+    "policy_version": "policy-v1",
+    "travel_version": "travel-v1",
+    "input_hash": null,
+    "created_at": "2026-10-15T18:00:00+09:00",
+    "confirmed_by": "seed",
+    "confirmed_at": "2026-10-15T18:00:00+09:00"
+  },
+  "plan_items": [
+    {
+      "id": "PI-J-PICK1",
+      "plan_id": "PL-007",
+      "job_id": "J-PICK1",
+      "employee_id": "E1",
+      "asset_ids": [
+        "P01"
+      ],
+      "start_at": "2026-10-16T09:40:00+09:00",
+      "end_at": "2026-10-16T10:30:00+09:00",
+      "segments": [
+        {
+          "kind": "TRAVEL",
+          "from_id": "L-W",
+          "to_id": "L-H",
+          "start_at": "2026-10-16T09:40:00+09:00",
+          "end_at": "2026-10-16T10:00:00+09:00"
+        },
+        {
+          "kind": "SERVICE",
+          "from_id": "L-H",
+          "to_id": "L-H",
+          "start_at": "2026-10-16T10:00:00+09:00",
+          "end_at": "2026-10-16T10:10:00+09:00"
+        },
+        {
+          "kind": "TRAVEL",
+          "from_id": "L-H",
+          "to_id": "L-W",
+          "start_at": "2026-10-16T10:10:00+09:00",
+          "end_at": "2026-10-16T10:30:00+09:00"
+        }
+      ],
+      "reason_codes": []
+    },
+    {
+      "id": "PI-J-PREP1",
+      "plan_id": "PL-007",
+      "job_id": "J-PREP1",
+      "employee_id": null,
+      "asset_ids": [
+        "P01"
+      ],
+      "start_at": "2026-10-16T10:30:00+09:00",
+      "end_at": "2026-10-16T11:00:00+09:00",
+      "segments": [
+        {
+          "kind": "PREP",
+          "from_id": "L-W",
+          "to_id": "L-W",
+          "start_at": "2026-10-16T10:30:00+09:00",
+          "end_at": "2026-10-16T11:00:00+09:00"
+        }
+      ],
+      "reason_codes": []
+    },
+    {
+      "id": "PI-J-DEL1",
+      "plan_id": "PL-007",
+      "job_id": "J-DEL1",
+      "employee_id": "E1",
+      "asset_ids": [
+        "P01"
+      ],
+      "start_at": "2026-10-16T11:40:00+09:00",
+      "end_at": "2026-10-16T12:35:00+09:00",
+      "segments": [
+        {
+          "kind": "TRAVEL",
+          "from_id": "L-W",
+          "to_id": "L-S",
+          "start_at": "2026-10-16T11:40:00+09:00",
+          "end_at": "2026-10-16T12:00:00+09:00"
+        },
+        {
+          "kind": "SERVICE",
+          "from_id": "L-S",
+          "to_id": "L-S",
+          "start_at": "2026-10-16T12:00:00+09:00",
+          "end_at": "2026-10-16T12:15:00+09:00"
+        },
+        {
+          "kind": "TRAVEL",
+          "from_id": "L-S",
+          "to_id": "L-W",
+          "start_at": "2026-10-16T12:15:00+09:00",
+          "end_at": "2026-10-16T12:35:00+09:00"
+        }
+      ],
+      "reason_codes": []
+    },
+    {
+      "id": "PI-J-AS1",
+      "plan_id": "PL-007",
+      "job_id": "J-AS1",
+      "employee_id": "E3",
+      "asset_ids": [
+        "W01"
+      ],
+      "start_at": "2026-10-16T09:40:00+09:00",
+      "end_at": "2026-10-16T11:00:00+09:00",
+      "segments": [
+        {
+          "kind": "TRAVEL",
+          "from_id": "L-W",
+          "to_id": "L-B",
+          "start_at": "2026-10-16T09:40:00+09:00",
+          "end_at": "2026-10-16T10:00:00+09:00"
+        },
+        {
+          "kind": "SERVICE",
+          "from_id": "L-B",
+          "to_id": "L-B",
+          "start_at": "2026-10-16T10:00:00+09:00",
+          "end_at": "2026-10-16T10:40:00+09:00"
+        },
+        {
+          "kind": "TRAVEL",
+          "from_id": "L-B",
+          "to_id": "L-W",
+          "start_at": "2026-10-16T10:40:00+09:00",
+          "end_at": "2026-10-16T11:00:00+09:00"
+        }
+      ],
+      "reason_codes": []
+    },
+    {
+      "id": "PI-J-DEL2",
+      "plan_id": "PL-007",
+      "job_id": "J-DEL2",
+      "employee_id": "E2",
+      "asset_ids": [
+        "N02"
+      ],
+      "start_at": "2026-10-16T10:40:00+09:00",
+      "end_at": "2026-10-16T11:35:00+09:00",
+      "segments": [
+        {
+          "kind": "TRAVEL",
+          "from_id": "L-W",
+          "to_id": "L-D",
+          "start_at": "2026-10-16T10:40:00+09:00",
+          "end_at": "2026-10-16T11:00:00+09:00"
+        },
+        {
+          "kind": "SERVICE",
+          "from_id": "L-D",
+          "to_id": "L-D",
+          "start_at": "2026-10-16T11:00:00+09:00",
+          "end_at": "2026-10-16T11:10:00+09:00"
+        },
+        {
+          "kind": "TRAVEL",
+          "from_id": "L-D",
+          "to_id": "L-W",
+          "start_at": "2026-10-16T11:10:00+09:00",
+          "end_at": "2026-10-16T11:35:00+09:00"
+        }
+      ],
+      "reason_codes": []
+    },
+    {
+      "id": "PI-J-PICK2",
+      "plan_id": "PL-007",
+      "job_id": "J-PICK2",
+      "employee_id": "E3",
+      "asset_ids": [
+        "N04"
+      ],
+      "start_at": "2026-10-16T15:10:00+09:00",
+      "end_at": "2026-10-16T16:00:00+09:00",
+      "segments": [
+        {
+          "kind": "TRAVEL",
+          "from_id": "L-W",
+          "to_id": "L-J",
+          "start_at": "2026-10-16T15:10:00+09:00",
+          "end_at": "2026-10-16T15:30:00+09:00"
+        },
+        {
+          "kind": "SERVICE",
+          "from_id": "L-J",
+          "to_id": "L-J",
+          "start_at": "2026-10-16T15:30:00+09:00",
+          "end_at": "2026-10-16T15:40:00+09:00"
+        },
+        {
+          "kind": "TRAVEL",
+          "from_id": "L-J",
+          "to_id": "L-W",
+          "start_at": "2026-10-16T15:40:00+09:00",
+          "end_at": "2026-10-16T16:00:00+09:00"
+        }
+      ],
+      "reason_codes": []
+    },
+    {
+      "id": "PI-J-PREP2",
+      "plan_id": "PL-007",
+      "job_id": "J-PREP2",
+      "employee_id": null,
+      "asset_ids": [
+        "N04"
+      ],
+      "start_at": "2026-10-16T16:00:00+09:00",
+      "end_at": "2026-10-16T16:20:00+09:00",
+      "segments": [
+        {
+          "kind": "PREP",
+          "from_id": "L-W",
+          "to_id": "L-W",
+          "start_at": "2026-10-16T16:00:00+09:00",
+          "end_at": "2026-10-16T16:20:00+09:00"
+        }
+      ],
+      "reason_codes": []
+    },
+    {
+      "id": "PI-J-DEL3",
+      "plan_id": "PL-007",
+      "job_id": "J-DEL3",
+      "employee_id": "E2",
+      "asset_ids": [
+        "W03"
+      ],
+      "start_at": "2026-10-17T09:35:00+09:00",
+      "end_at": "2026-10-17T11:00:00+09:00",
+      "segments": [
+        {
+          "kind": "TRAVEL",
+          "from_id": "L-W",
+          "to_id": "L-M",
+          "start_at": "2026-10-17T09:35:00+09:00",
+          "end_at": "2026-10-17T10:00:00+09:00"
+        },
+        {
+          "kind": "SERVICE",
+          "from_id": "L-M",
+          "to_id": "L-M",
+          "start_at": "2026-10-17T10:00:00+09:00",
+          "end_at": "2026-10-17T10:30:00+09:00"
+        },
+        {
+          "kind": "TRAVEL",
+          "from_id": "L-M",
+          "to_id": "L-W",
+          "start_at": "2026-10-17T10:30:00+09:00",
+          "end_at": "2026-10-17T11:00:00+09:00"
+        }
+      ],
+      "reason_codes": []
+    },
+    {
+      "id": "PI-J-AS2",
+      "plan_id": "PL-007",
+      "job_id": "J-AS2",
+      "employee_id": "E1",
+      "asset_ids": [
+        "P03"
+      ],
+      "start_at": "2026-10-17T13:40:00+09:00",
+      "end_at": "2026-10-17T14:55:00+09:00",
+      "segments": [
+        {
+          "kind": "TRAVEL",
+          "from_id": "L-W",
+          "to_id": "L-D",
+          "start_at": "2026-10-17T13:40:00+09:00",
+          "end_at": "2026-10-17T14:00:00+09:00"
+        },
+        {
+          "kind": "SERVICE",
+          "from_id": "L-D",
+          "to_id": "L-D",
+          "start_at": "2026-10-17T14:00:00+09:00",
+          "end_at": "2026-10-17T14:30:00+09:00"
+        },
+        {
+          "kind": "TRAVEL",
+          "from_id": "L-D",
+          "to_id": "L-W",
+          "start_at": "2026-10-17T14:30:00+09:00",
+          "end_at": "2026-10-17T14:55:00+09:00"
+        }
+      ],
+      "reason_codes": []
+    },
+    {
+      "id": "PI-J-TR1",
+      "plan_id": "PL-007",
+      "job_id": "J-TR1",
+      "employee_id": "E3",
+      "asset_ids": [
+        "N01"
+      ],
+      "start_at": "2026-10-18T10:35:00+09:00",
+      "end_at": "2026-10-18T12:15:00+09:00",
+      "segments": [
+        {
+          "kind": "TRAVEL",
+          "from_id": "L-W",
+          "to_id": "L-M",
+          "start_at": "2026-10-18T10:35:00+09:00",
+          "end_at": "2026-10-18T11:00:00+09:00"
+        },
+        {
+          "kind": "SERVICE",
+          "from_id": "L-M",
+          "to_id": "L-M",
+          "start_at": "2026-10-18T11:00:00+09:00",
+          "end_at": "2026-10-18T11:10:00+09:00"
+        },
+        {
+          "kind": "TRAVEL",
+          "from_id": "L-M",
+          "to_id": "L-H",
+          "start_at": "2026-10-18T11:10:00+09:00",
+          "end_at": "2026-10-18T11:45:00+09:00"
+        },
+        {
+          "kind": "SERVICE",
+          "from_id": "L-H",
+          "to_id": "L-H",
+          "start_at": "2026-10-18T11:45:00+09:00",
+          "end_at": "2026-10-18T11:55:00+09:00"
+        },
+        {
+          "kind": "TRAVEL",
+          "from_id": "L-H",
+          "to_id": "L-W",
+          "start_at": "2026-10-18T11:55:00+09:00",
+          "end_at": "2026-10-18T12:15:00+09:00"
+        }
+      ],
+      "reason_codes": []
+    },
+    {
+      "id": "PI-J-PICK3",
+      "plan_id": "PL-007",
+      "job_id": "J-PICK3",
+      "employee_id": "E1",
+      "asset_ids": [
+        "W02"
+      ],
+      "start_at": "2026-10-19T09:40:00+09:00",
+      "end_at": "2026-10-19T10:40:00+09:00",
+      "segments": [
+        {
+          "kind": "TRAVEL",
+          "from_id": "L-W",
+          "to_id": "L-S",
+          "start_at": "2026-10-19T09:40:00+09:00",
+          "end_at": "2026-10-19T10:00:00+09:00"
+        },
+        {
+          "kind": "SERVICE",
+          "from_id": "L-S",
+          "to_id": "L-S",
+          "start_at": "2026-10-19T10:00:00+09:00",
+          "end_at": "2026-10-19T10:20:00+09:00"
+        },
+        {
+          "kind": "TRAVEL",
+          "from_id": "L-S",
+          "to_id": "L-W",
+          "start_at": "2026-10-19T10:20:00+09:00",
+          "end_at": "2026-10-19T10:40:00+09:00"
+        }
+      ],
+      "reason_codes": []
+    },
+    {
+      "id": "PI-J-PREP3",
+      "plan_id": "PL-007",
+      "job_id": "J-PREP3",
+      "employee_id": null,
+      "asset_ids": [
+        "W02"
+      ],
+      "start_at": "2026-10-19T10:40:00+09:00",
+      "end_at": "2026-10-19T11:20:00+09:00",
+      "segments": [
+        {
+          "kind": "PREP",
+          "from_id": "L-W",
+          "to_id": "L-W",
+          "start_at": "2026-10-19T10:40:00+09:00",
+          "end_at": "2026-10-19T11:20:00+09:00"
+        }
+      ],
+      "reason_codes": []
+    },
+    {
+      "id": "PI-J-DEL4",
+      "plan_id": "PL-007",
+      "job_id": "J-DEL4",
+      "employee_id": "E2",
+      "asset_ids": [
+        "P04"
+      ],
+      "start_at": "2026-10-19T13:40:00+09:00",
+      "end_at": "2026-10-19T14:35:00+09:00",
+      "segments": [
+        {
+          "kind": "TRAVEL",
+          "from_id": "L-W",
+          "to_id": "L-J",
+          "start_at": "2026-10-19T13:40:00+09:00",
+          "end_at": "2026-10-19T14:00:00+09:00"
+        },
+        {
+          "kind": "SERVICE",
+          "from_id": "L-J",
+          "to_id": "L-J",
+          "start_at": "2026-10-19T14:00:00+09:00",
+          "end_at": "2026-10-19T14:15:00+09:00"
+        },
+        {
+          "kind": "TRAVEL",
+          "from_id": "L-J",
+          "to_id": "L-W",
+          "start_at": "2026-10-19T14:15:00+09:00",
+          "end_at": "2026-10-19T14:35:00+09:00"
+        }
+      ],
+      "reason_codes": []
+    },
+    {
+      "id": "PI-J-AS3",
+      "plan_id": "PL-007",
+      "job_id": "J-AS3",
+      "employee_id": "E3",
+      "asset_ids": [
+        "W01"
+      ],
+      "start_at": "2026-10-20T14:40:00+09:00",
+      "end_at": "2026-10-20T16:00:00+09:00",
+      "segments": [
+        {
+          "kind": "TRAVEL",
+          "from_id": "L-W",
+          "to_id": "L-B",
+          "start_at": "2026-10-20T14:40:00+09:00",
+          "end_at": "2026-10-20T15:00:00+09:00"
+        },
+        {
+          "kind": "SERVICE",
+          "from_id": "L-B",
+          "to_id": "L-B",
+          "start_at": "2026-10-20T15:00:00+09:00",
+          "end_at": "2026-10-20T15:40:00+09:00"
+        },
+        {
+          "kind": "TRAVEL",
+          "from_id": "L-B",
+          "to_id": "L-W",
+          "start_at": "2026-10-20T15:40:00+09:00",
+          "end_at": "2026-10-20T16:00:00+09:00"
+        }
+      ],
+      "reason_codes": []
+    },
+    {
+      "id": "PI-J-PICK4",
+      "plan_id": "PL-007",
+      "job_id": "J-PICK4",
+      "employee_id": "E2",
+      "asset_ids": [
+        "P03"
+      ],
+      "start_at": "2026-10-21T09:40:00+09:00",
+      "end_at": "2026-10-21T10:35:00+09:00",
+      "segments": [
+        {
+          "kind": "TRAVEL",
+          "from_id": "L-W",
+          "to_id": "L-D",
+          "start_at": "2026-10-21T09:40:00+09:00",
+          "end_at": "2026-10-21T10:00:00+09:00"
+        },
+        {
+          "kind": "SERVICE",
+          "from_id": "L-D",
+          "to_id": "L-D",
+          "start_at": "2026-10-21T10:00:00+09:00",
+          "end_at": "2026-10-21T10:10:00+09:00"
+        },
+        {
+          "kind": "TRAVEL",
+          "from_id": "L-D",
+          "to_id": "L-W",
+          "start_at": "2026-10-21T10:10:00+09:00",
+          "end_at": "2026-10-21T10:35:00+09:00"
+        }
+      ],
+      "reason_codes": []
+    },
+    {
+      "id": "PI-J-PREP4",
+      "plan_id": "PL-007",
+      "job_id": "J-PREP4",
+      "employee_id": null,
+      "asset_ids": [
+        "P03"
+      ],
+      "start_at": "2026-10-21T10:35:00+09:00",
+      "end_at": "2026-10-21T11:05:00+09:00",
+      "segments": [
+        {
+          "kind": "PREP",
+          "from_id": "L-W",
+          "to_id": "L-W",
+          "start_at": "2026-10-21T10:35:00+09:00",
+          "end_at": "2026-10-21T11:05:00+09:00"
+        }
+      ],
+      "reason_codes": []
+    }
+  ],
+  "scenarios": [
+    {
+      "case_id": "DEV-DELAY-01",
+      "source_customer_id": "C-H",
+      "received_at": "2026-10-16T09:00:00+09:00",
+      "request_text": "안녕하세요 한빛상사입니다. 오늘 프린터 회수를 오후 2시로 미뤄 주실 수 있을까요?"
+    },
+    {
+      "case_id": "DEV-DELIVERY-01",
+      "source_customer_id": "C-B",
+      "received_at": "2026-10-16T09:00:00+09:00",
+      "request_text": "바른법무사무소입니다. 내일 오전에 노트북 1대 추가로 납품 부탁드립니다."
+    }
+  ]
+}

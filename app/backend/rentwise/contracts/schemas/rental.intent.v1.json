@@ -1,0 +1,164 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "operations",
+    "needs_confirmation"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "enum": [
+        "rental.intent.v1"
+      ]
+    },
+    "operations": {
+      "type": "array",
+      "maxItems": 4,
+      "items": {
+        "$ref": "#/$defs/operation"
+      }
+    },
+    "needs_confirmation": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "path",
+          "reason",
+          "question"
+        ],
+        "properties": {
+          "path": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string",
+            "enum": [
+              "MISSING",
+              "AMBIGUOUS",
+              "OUT_OF_RANGE",
+              "UNSUPPORTED"
+            ]
+          },
+          "question": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "nullableString": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "operation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "operation",
+        "kind",
+        "target_job_id",
+        "item_id",
+        "asset_ids",
+        "quantity",
+        "source_customer_id",
+        "destination_customer_id",
+        "window_start",
+        "window_end",
+        "due_at",
+        "rental_end_at",
+        "priority_hint",
+        "evidence"
+      ],
+      "properties": {
+        "operation": {
+          "type": "string",
+          "enum": [
+            "CREATE",
+            "RESCHEDULE"
+          ]
+        },
+        "kind": {
+          "type": "string",
+          "enum": [
+            "DELIVERY",
+            "PICKUP",
+            "AS",
+            "TRANSFER"
+          ]
+        },
+        "target_job_id": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "item_id": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "asset_ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "quantity": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 1,
+          "maximum": 12
+        },
+        "source_customer_id": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "destination_customer_id": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "window_start": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "window_end": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "due_at": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "rental_end_at": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "priority_hint": {
+          "type": "string",
+          "enum": [
+            "NORMAL",
+            "URGENT",
+            "UNKNOWN"
+          ]
+        },
+        "evidence": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "path",
+              "quote"
+            ],
+            "properties": {
+              "path": {
+                "type": "string"
+              },
+              "quote": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
