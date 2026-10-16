@@ -37,3 +37,9 @@ cd infra && cp .env.example .env && vi .env && ./scripts/deploy.sh && ./scripts/
 ## A 엔진 연결 상태
 
 `ENGINE_MODE=real` 이면 GPT 해석(A) → 사람 확인 → 배정 계산(A) → 확정(B)으로 동작한다. 회수 지연은 A v2 core 를 B 가 직접 연결해 반납·준비·다음 납품(같은 모델 대체)까지 저장하고, 그 밖의 기존 작업 변경은 A v1 호환 엔진을 쓴다. 비용 장부·호출 기록·켜는 방법: [docs/AI_REAL_MODE.md](docs/AI_REAL_MODE.md), A 상세: [A 인수인계](docs/handoffs/A.md).
+
+신규 단일 납품은 A의 `RealEngine(delivery_enabled=True)`에서 기존 B v1 형식으로 계산할 수 있다. 직원·동일 품목 장비를 배정하고 확정 직전에 신규 Job/PLANNED Rental/예약/준비 의존 생성분을 재검증한다. 기본 비활성이며 **B의 서버 ID·반납 정책 주입, 신규 작업 비교 표시, 확정 저장 연결이 필요하다.** [B 연결 문서](docs/handoffs/A_DELIVERY_CONNECTION.md)를 따른다. 기존 GPT 비용원장·회수 v2 경로는 유지한다.
+
+당일 추가 요청의 A 실행 보호(TEL-054): 완료·진행 작업을 고정하고, 지난 미시작 작업은 상태 확인으로 차단합니다. B는 직원 실행 상태/운영 자원/revision 갱신과 v1·회수 v2 양쪽 실제 clock을 연결해야 합니다. [B 연결 안내](docs/handoffs/A_INTRADAY_CONNECTION.md).
+
+선택적 native v1 회수 adapter도 함께 제공하지만, 현재 B 웹의 회수 지연은 기존 v2 bridge를 계속 사용합니다. [native adapter 인계](docs/handoffs/A_RECOVERY_CONNECTION.md). AI 입력 한도는 전체 UTF-8 bytes+256 ≤16000, 예약은 시도당 $0.0064입니다. [한도·예약 정책](docs/AI_REAL_MODE.md#4-비용).

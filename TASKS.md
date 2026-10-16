@@ -75,3 +75,71 @@ PASS `cd app/backend && .venv/bin/python -m pytest -q`:107 tests(v2 67+v1 33+B7)
 
 Owner A/Codex, branch feat/a-engine-updates, latest main9666202. 사용자 요청으로 TEL-052 회수 native adapter·TEL-053 신규 납품·TEL-054 당일 실행 보호·TEL-055 AI 입력 한도를 새 integration checkout에 통합한다. 원본 dirty checkout 세 곳은 checksum으로 보존한다. 소유 engine/, tests/engine/, A 인계/README/ARCHITECTURE/AI_REAL_MODE와 작업 기록; B services/DB/contracts/프런트/infra·C seed/gold는 제외한다.
 순서: native recovery와 delivery의 공용 v1/Facade를 결합하고 회수 prepare에도 현재시각 보호 적용 → 전체 backend/B HTTP/C busy FakeClient 및 frontend checks → 기능/AI입력/연결문서 범위별 커밋 → remote push/main PR/CI 확인. B의 기존 v2 회수 bridge는 그대로 유지하고 native adapter를 자동 활성화하지 않는다. PR·push는 승인됐고 main 병합/배포/유료 호출은 범위 밖이다.
+
+
+## TEL-052 — B v1 회수 지연 복구
+
+2026-10-17 사용자 요청: 웹에서 회수 지연 복구안을 계산·확정하도록 A 담당부터 구현하고 B 환경을 최대한 유지한다. 기준 main9ab0c25, 새 codex/a-pickup-recovery. B/C/공유 계약·DB 코드는 수정하지 않는다.
+계획: native B v1 snapshot/Result로 기존 단일 개체 PICKUP→연결 PREP→기존 DELIVERY 유지/동일 품목 대체를 탐색한다. 기존 실제 상태/다른 고객 약속은 보존하고 직원·이동·휴식·재고·예약을 검증한다. 확정용 순수 prepare_confirmation이 최신 snapshot+저장 operations/후보/예약 delta를 재검증하고 Job/Rental/Dependency 변경분을 만든다. B는 기존 잠금·revision·멱등 안에서 이 변경분을 원자 저장한다. 별도 서버/도메인 DTO/숨은 context/cache는 추가하지 않는다.
+수용: 14시 회수→14:30 창고→15시 준비, P02로 기존 정오 납품 유지, 불가 직원/준비전 재사용/예약·기한·고정 작업/부분안 차단, 입력 불변·JSON 왕복·새 엔진 확정 재검증·위조 delta 차단, 실제 B API 초안/기존 confirm 안전 차단 및 격리 DB 저장 delta 재조회. 1000후보/2초, 자동 영향3작업, 명시 직원 override는 별도 적용·재검증한다.
+위험: 기존 2인자 validate에는 승인된 변경 조건/예약 delta가 없어 회수 지연을 허용하면 안전 경계가 사라진다. 기본 RealEngine은 현재 제한을 유지하고 B가 recovery_enabled=True와 prepare_confirmation 저장 훅을 연결할 때만 활성화한다. 신규 대여/다개체/TRANSFER/다중 지연은 이번 범위 밖. 기존 seed AS2 휴식 충돌은 원본 그대로 감지하며 시험의 명시 E2 override와 구분한다. LLM/비용원장은 별도 미연결이며 이번 계산에 모델 호출은 없다.
+
+결과: `engine/recovery.py`, RealEngine opt-in/순수 prepare_confirmation, native v1 검증의 제한된 내부 투영 경로를 구현했다. 14시 회수/E2→15시 준비, P02로 기존 정오 납품 유지 및 정확한 Job/Rental/Dependency/예약 교체를 산출한다. 늦은 회수라도 원래 개체 재사용이 가능하면 우선한다. 입력 불변/JSON 왕복/새 엔진·B 부여 ID 허용, 준비·이동·달력·예약·고정 작업/위조 후보·delta·누락 연결/탐색 제한을 검증한다. SUPERSEDED 예약은 옛 개체 이력을 보존하고 ACTIVE 대여/예약 개체 일치는 엄격히 유지한다. 원본 B API 초안 READY·비교 성공, 미수정 confirm422 무저장, 참고 SQLite adapter 저장 후 새 엔진 VALID/availability OK 및 예외 전체 롤백을 확인했다.
+
+검증 PASS: `cd app/backend && .venv/bin/python -m pytest -q` **242개** (기존186+신규56), 외부 anyio deprecation1. PASS diff 공백·A 소유 범위/공용 DTO·B production/C 불변 확인. NOT CONFIGURED `sh scripts/check.sh` (원격 파일 없음, exit127); 원본 작업공간의 동일 명령은 bootstrap/이전 A69개 PASS이며 새 앱242개와 별도다. SKIPPED frontend/infra 재빌드(소스/HTTP DTO/의존성 불변), 실제 브라우저/Oracle/운영 잠금·동시성/배포/새 유료 LLM 호출. B 실제 confirm 성공은 미완료다.
+
+연결 명세: [A_RECOVERY_CONNECTION.md](docs/handoffs/A_RECOVERY_CONNECTION.md). B는 registry 플래그와 기존 confirm의 A prepare+Job/Rental/Dependency/예약 원자 저장을 연결해야 한다. AS2 seed 휴식 충돌/현재 UI override 미전달과 AI 영속 비용원장은 별도 미완료다. B 코드·공용 계약·DB schema·UI·infra/C seed 변경, commit/push/PR/배포/다른 채팅 전송 없음.
+
+
+## TEL-053 — B v1 신규 납품 자동 배정
+
+2026-10-17 사용자 요청. 최신 main03e7913 (B real AI/회수 v2 연결 PR #11 포함) 기준 별도 worktree `/private/tmp/rentwise-a-delivery-20261017`에서 구현한다. 기존 `/private/tmp/rentwise-a-engine-20261016`의 미커밋 TEL-052 회수 복구 작업은 보존한다. 기준 backend190개 PASS. B의 영속 비용원장/회수 bridge와 검수 seed를 사용하며 이 경로를 교체하지 않는다.
+
+계획: 기존 B v1 NormalizedOperation의 CREATE DELIVERY 1건/장비1대를 처리한다. B가 신규 Job/Rental/Reservation/조건부 준비 의존 ID와 FIXED 또는 OPEN_ENDED 정책을 서버 내부 allocation/return_policy로 주입한 뒤 canonical hash를 계산한다. 공용 DTO/schema/HTTP 변경 없음. 원문·AI에서 ID나 확인 상태를 신뢰하지 않는다. opt-in `delivery_enabled=True`에서 직원/동일 품목 장비/5분 방문 후보를 탐색하고 기존 약속·실제 상태를 보존하며 전체 계획을 검사한다. 준비에 의존한 재사용은 기존 회수·준비 및 예약 release가 명시된 경우만 허용한다. 최대1000후보/2초, 명시 직원 override≤3. 준비·회수 작업 신설/다개체/다중 요청/직접 현장 간 경로 최적화는 범위 밖이다.
+
+순수 prepare_delivery_confirmation은 최신 snapshot+저장 operations+전체 후보/예약 delta+request_id/input_hash에서 Job/Rental/Reservation/Dependency 생성분과 기존 직원 변경용 Job revision 변경분을 재계산한다. 기본 2인자 validate는 신규 작업을 계속 거부한다. B의 잠금/revision/멱등 가드는 유지하고 모든 생성분을 같은 confirm 트랜잭션에서 저장한다. FIXED 대여 종료도 회수/준비 release가 없으므로 예약은 무기한 보수 점유한다. PLANNED 대여만 생성하고 Asset 물리/실제 대여 시각은 변경하지 않는다.
+
+수용: 실제 B seed의 준비 완료 장비/자격 직원 배정, 선호 직원 불가 시 대체, 조건부 준비 후 재사용/준비전·미래 예약·휴식·근무·방문창·기한 차단, 빈 후보 실패와 정확한 상한 보고. JSON 왕복/다른 엔진/B 발급 plan ID/입력 불변, 신규 생성 데이터와 delta 위조·ID 충돌·기존 약속 변경 차단. 기존 B 초안 저장·조회 한계/미수정 confirm 안전 차단과 참고 격리 DB 원자 저장·재조회·롤백 시험. 전체 backend 회귀와 root check를 실행하고 브라우저/Oracle/B 실제 연결 미완료는 구분한다.
+
+위험/인계: B plan_view는 아직 운영 jobs 테이블에 없는 신규 후보의 업무종류·현장을 알 수 없어 A가 재계산한 job_creates를 초안 메타데이터로 저장·표시해야 한다. 기본 비활성을 유지하고 B 연결 필수 지점을 별도 A_DELIVERY_CONNECTION.md로 문서화한다. B production/공용 타입/DB schema/UI/infra/C 데이터는 수정하지 않는다. 새 유료 호출·commit/push/PR/배포는 이번 요청 범위가 아니다.
+
+결과: `engine/delivery.py`와 RealEngine의 `delivery_enabled`/`prepare_delivery_confirmation`, native v1 내부 `new_jobs` 검사 옵션을 구현했다. 기존 실제 B seed에서 PR-A1대15시 납품→P02/E1, 14:40 출고~15:35 복귀, 기존 약속 보존. 준비 완료 또는 명시된 기존 회수/PREP/release에 의존한 장비를 선택하고 Job/PLANNED Rental/예약/필요 의존 생성분을 순수 재검증한다. 기본 비활성/기존 validate의 신규 작업 차단은 유지한다. 대여 종료일도 회수/준비가 없으면 무기한 예약이다.
+
+PASS 최종 backend `cd app/backend && /private/tmp/rentwise-a-engine-20261016/app/backend/.venv/bin/python -m pytest -q` **256개**(기준190+신규66), 외부 anyio deprecation1. 원래 venv의 Python만 재사용하며 새 worktree의 conftest/소스를 사용한다. PASS JSON/새 엔진/B 발급 행 ID/입력 불변, 정상·조건부·하드 제약/정책·미래 예약·위조/새 충돌·상한. B HTTP 초안은 시험용 정규화 binding으로201 READY/저장·조회되며, 신규 kind/site=null인 현 표시 한계와 미수정 confirm422/무저장을 검증했다. 참고 SQLite 쓰기 adapter로 READY/조건부 각각 전 생성분+기존 finish 커밋→새 엔진 VALID/가용 재조회, Job 생성 직후/finish 후 예외→전 상태 롤백 PASS.
+
+NOT CONFIGURED remote `sh scripts/check.sh` (파일 없음, exit127). PASS root 동명 명령 bootstrap/이전 A69개(새 앱256개와 별도). SKIPPED frontend/infra 재빌드(해당 소스/외부 DTO/의존성 불변), 브라우저/Oracle·운영 동시성/배포/새 유료 호출. B production/공유 계약/DB schema/UI/infra/C 무변경. B 실제 웹 confirm200 및 C 독립 인수는 미완료다.
+
+연결 문서 [A_DELIVERY_CONNECTION.md](docs/handoffs/A_DELIVERY_CONNECTION.md): B 서버 ID/명시 반납 정책 주입+flag, 초안 Job 표시 metadata/plan_view overlay, 최신 HUMAN 해석 검사+기존 confirm의 순수 prepare와 원자 INSERT/finish 연결. 최신 B의 비용원장·회수 bridge는 구현돼 있으므로 이들을 다시 만들 필요 없다. 현재 반납 미정 UI/확인 경로는 별도 후속이다. 이전 TEL-052 작업은 원래 checkout에 보존했고 이번 branch로 복사·합치지 않았다. commit/push/PR/배포/타 채팅 전송 없음.
+
+
+## TEL-054 — 당일 실행 상태를 보존하는 잔여 일정 계산 (In Progress)
+
+Owner A/Codex, branch codex/a-new-delivery, main03e7913 + 미커밋 TEL-053 보존. 소유 engine/, tests/engine/, A 인계 문서와 본 작업 기록. B service/DB/UI/공용 DTO/seed는 수정하지 않는다.
+사용자 전제: B가 직원별 작업 시작·완료 상태를 갱신한다. 수용: 완료/진행/실패 행 불변, 지난 미시작 작업은 상태 확인으로 차단, 미래 변경/신규 배정만 허용, 진행 직원/장비의 종료를 추정하지 않음, 계산 후 시간 경과·실행 상태 변경을 확정 재검증에서 거부, 최신 B v2 회수 경로에도 적용. 기존 약속과 실제 상태 불변 및 전체 회귀.
+계획: 공통 순수 실행 보호 → v1 solve/validate/availability 및 delivery prepare 연결 → v2 solve/validator 연결 → 상태·현재시각·직원 이동·확정 경쟁 회귀 → B 이벤트/clock/revision 연결 문서와 검증 기록.
+위험/정책: 상태만으로 진행 종료/실패 위치/완료 순서를 알 수 없다. 진행 직원에 신규·변경 업무를 추가하지 않으며 완료는 복귀 포함 전체 PlanItem 종료를 뜻한다. 완료 순서는 추정하지 않고 가능한 완료 지점 모두에서 현재시각 이후 이동 가능한지 보수적으로 확인한다. 실패 직원 위치는 확인 필요로 둔다. 실제 위치 추적/진행 종료 예상/전체 일정 최적화는 범위 밖. seed clock은 호환 보존하고 B가 모든 경로에 실제 서버 clock을 연결해야 한다.
+검증 예정: 기존 CI backend pytest 전체 및 새 당일 시나리오/확정 재검증, git diff --check, root sh scripts/check.sh. 원격 scripts/check.sh는 미구성, UI/Oracle/실행 이벤트 운영 인수는 B 연결 전 미완료.
+
+TEL-054 결과 — Review(A 구현/로컬 검증 완료, B 실행 이벤트 연결 대기).
+공통 execution 보호를 v1 solve/validate/availability, TEL-053 delivery solve/prepare, v2 solve/validate/availability에 연결했다. 상태 기반 이력 불변·지난 미시작 작업 확인·진행 직원/장비 보호·현재시각 이후 출발/이동·확정 시 fresh clock을 검증한다. 기존 public DTO/B production/DB/UI/C 데이터 불변. 보수적 위치/미시작 지연 한계는 A_INTRADAY_CONNECTION에 기록했다.
+PASS 최종 `cd app/backend && /private/tmp/rentwise-a-engine-20261016/app/backend/.venv/bin/python -m pytest -q`: **290개**(기존256+당일34), 외부 anyio deprecation1. 새 시험은 오전 이력 보존/다른 직원 배정/확정 시 상태·시간 변경/과거 ASSIGNED/현재 이동·완료 순서/진행 장비/v2 회귀와 기존 B HTTP AS·회수 confirm422/SQLite 전 상태 무저장을 포함한다. 실행 이벤트 자체는 테스트 snapshot/기존 status 컬럼으로 재현했다. 중간 실패는 바뀐 정책·버전 기대값과 합성 fixture(휴식/DTO copy/대여 enum/스키마)를 수정한 뒤 최종 전체 PASS했다.
+PASS root sh scripts/check.sh(bootstrap+기존 A69, 새 앱290과 별도), git diff --check, A 소유17파일/로컬 링크/비밀값 패턴 검사. NOT CONFIGURED 원격 sh scripts/check.sh(없음,exit127), backend lint/type/build 별도 명령. SKIPPED frontend/infra 재빌드(소스 불변), 실제 직원 이벤트 API/UI·Oracle 동시성·배포·유료 호출.
+원격 최종 main9666202를 fetch/대조했다. 기준03e7913 이후 추가는 도쿄 DR Terraform/CI/문서뿐이고 app diff는 없다. 브랜치의 기존 TEL-053 작업을 유지했으며 원격 main을 로컬 변경 위에 덮어쓰지 않았다. B 연결: docs/handoffs/A_INTRADAY_CONNECTION.md. commit/push/PR/배포/다른 채팅 전송 없음.
+
+
+## TEL-055 — AI 해석 입력 한도와 비용 예약 정합성 (In Progress)
+
+Owner A/Codex, branch codex/a-ai-input-limit, base main03e7913, checkout /private/tmp/rentwise-a-input-limit-20261017. 기존 TEL-053/054 미커밋 작업은 다른 checkout에 보존한다. 소유 engine/interpret.py, tests/engine/, docs/handoffs/A.md·A_AI_CONNECTION.md·docs/AI_REAL_MODE.md(사용자 명시 요청), 작업 기록. B services/DB·C gold/분류는 수정하거나 사용하지 않는다.
+계획: UTF-8 전체 body+256 한도를16000으로 상향하고 동일 상수를 사용하는 Decimal 예약식(입력1.25배+출력2000)을 검증 → 38/120거래처·정확경계·초과·최대usage/재시도/잔액 시험 → C busy infra seed는 환경변수로만 읽는 opt-in 격리 SQLite 실모드 FakeClient 해석/사람확인/계획/확정 시험 → 전체 회귀와 요청 문서 갱신.
+정책: 기존 모델/단가 PRICE_VERSION와 실제 프롬프트 PROMPT_VERSION은 변경하지 않는다. 예약은 $0.0064/시도, 두 시도 $0.0128. 240회×2시도 최대 예약 $3.072(모두 예약 보유 가정)로 계산하며 청구액/운영 승인액으로 표현하지 않는다. 120곳은 대표 크기 시험이며 긴 이름/15개 작업 등 모든 조합 통과를 보장하지 않는다. 토큰 tokenizer/API 호출은 추가하지 않고 기존 byte≥token 보수 정책+framing256을 유지한다. 유료 호출·commit/push 없음.
+
+TEL-055 결과 — Review. INPUT_LIMIT16000/여유256·출력2000, 기존 PRICE/PROMPT 유지. 같은 상수를 쓰는 예약식으로 $0.0064/시도·최대2시도 $0.0128, 240회×2=$3.072 정합성 확인. 요청의 $6.14 산술은 문서에서 정정했다. 신규 tests/engine/test_input_limit.py13개 및 기존 기대값/요청 문서2개와 A_AI_CONNECTION의 예전 예약 수치를 갱신했다.
+PASS 최종 backend(명시 C busy seed, FakeClient)203개=기존190+신규13/anyio warning1. C seed 실제 B API 해석200→사람확인→계획201 READY→확정200/재조회, byte 검사8272, 입력/seed/실제 Asset 불변, 실제 B 최대정산=예약0.0064. PASS root sh scripts/check.sh bootstrap+이전 A69, diff공백·B services/DB/contracts/fixtures 무변경. NOT CONFIGURED 원격 scripts/check.sh exit127/backend 별도 lint/type/build. SKIPPED FE/infra(소스 불변), 실제 유료 호출·Oracle·브라우저·T17 실측. 상세 A 인계 TEL-055. commit/push/PR/배포/메시지 전송 없음.
+
+## TEL-056 통합 결과 (최신 상태)
+
+최신 main9666202 위에서 TEL-052/053/054/055 전체를 통합했다. B v2 회수는 그대로이며 native 회수는 opt-in, 신규 납품은 B 생성/표시/확정 연결 대기다. 회수 prepare에도 fresh clock/상태 보호를 적용하고 양 플래그 동시 사용/혼합 요청 차단3개 회귀를 추가했다. 원본 checkout3곳의 파일 checksum을 보존했다. 앞선 task의 미커밋/미병합 기록은 당시 상태이며 이 제출로 대체한다.
+PASS 통합 backend362개=기준190+회수56+납품66+당일37+한도13(명시 C busy seed/FakeClient, anyio warning1), 프런트 configured typecheck/build36modules. npm 실행파일은 현재 PATH에 없어 번들 Node로 package.json의 vue-tsc --noEmit / vite build를 직접 실행했다. 의존성은 기존 node_modules를 symlink로 재사용한 뒤 링크를 제거했다. B services/DB/contracts/FE/infra/C 소스 diff0. 실제 유료호출·운영 Oracle·브라우저/실행 이벤트·동시성/배포는 SKIPPED. 원격 scripts/check.sh 없음 NOT CONFIGURED, root check는 별도 증거.
+커밋: 7f8dcf0 feat(engine): support intraday rental planning; b4145dd fix(engine): raise AI input bound with safe reserve. 문서 커밋 후 feat/a-engine-updates를 push/main 대상 PR을 생성한다. 사용자 승인 범위는 commit/push/PR이며 main 병합/배포는 하지 않는다.
+
+TEL-056 제출 전 추가 PASS: root sh scripts/check.sh 구성/문서/셸+기존A69(앱362와 별도), C seed 미지정 조건에서 통합1개 SKIPPED 확인, diff/소유25파일·문서 링크·비밀값 패턴·원본 dirty파일checksum 동일. B production/공유 계약/프런트/infra/C diff0. 문서에는 과거 미연결 기록과 현재 B v2 회수/비용원장 연결을 구분했다.
