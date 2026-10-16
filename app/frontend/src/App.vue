@@ -201,18 +201,18 @@ const isAdmin = computed(() => user.value?.role === 'ADMIN')
 
 <style scoped>
 .splash { min-height: 100vh; }
-.app { min-height: 100vh; display: grid; grid-template-rows: auto auto 1fr auto; }
+.app { min-height: 100vh; display: grid; grid-template-rows: auto auto 1fr auto; grid-template-columns: minmax(0, 1fr); }
 .top { position: sticky; top: 0; z-index: 10; display: flex; align-items: center; gap: 18px; padding: 10px 20px; background: var(--surface); border-bottom: 1px solid var(--line); flex-wrap: wrap; }
 .brand { display: flex; align-items: center; gap: 8px; font-size: 17px; letter-spacing: -.01em; }
 .day { display: flex; align-items: center; gap: 2px; font-weight: 600; }
 .state { display: flex; gap: 6px; flex-wrap: wrap; }
 .who { margin-left: auto; display: flex; align-items: center; gap: 4px; font-size: 14px; color: var(--ink-2); }
 .page { margin: 12px 20px 0; }
-.layout { display: grid; grid-template-columns: minmax(0, 1fr) 420px; gap: 18px; padding: 18px 20px; align-items: start; }
+.layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(360px, 420px); gap: 18px; padding: 18px 20px; align-items: start; }
 .left { display: grid; gap: 14px; min-width: 0; }
 .board-head { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
 .board-head p { color: var(--ink-3); font-size: 13.5px; }
-.right { position: sticky; top: 70px; }
+.right { position: sticky; top: 70px; min-width: 0; }
 .staff { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-m); padding: 18px; display: grid; gap: 6px; }
 .staff p { color: var(--ink-2); font-size: 14px; }
 .foot { padding: 8px 20px 16px; font-size: 12px; color: var(--ink-3); }

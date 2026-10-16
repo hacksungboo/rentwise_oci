@@ -138,7 +138,7 @@ async function hold() {
 </template>
 
 <style scoped>
-.panel { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-m); padding: 18px; display: grid; gap: 14px; align-content: start; }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-m); padding: 18px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; align-content: start; min-width: 0; }
 header p { color: var(--ink-3); font-size: 13.5px; margin-top: 2px; }
 header.row { display: flex; justify-content: space-between; align-items: start; gap: 10px; }
 .chain { margin: 0; padding: 0; list-style: none; display: grid; gap: 0; counter-reset: c; }
@@ -152,7 +152,7 @@ header.row { display: flex; justify-content: space-between; align-items: start; 
 .changes li { border: 1px solid var(--line); border-radius: var(--radius-s); padding: 10px 12px; display: grid; gap: 8px; }
 .title { display: flex; gap: 7px; align-items: center; font-size: 14px; }
 .title small { margin-left: auto; color: var(--ink-3); font-size: 12px; }
-.cmp { display: grid; grid-template-columns: 1fr auto 1fr; gap: 8px; align-items: center; font-size: 13.5px; }
+.cmp { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 8px; align-items: center; font-size: 13.5px; }
 .cmp > div { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
 .before { color: var(--ink-3); }
 .arrow { font-size: 20px; color: var(--ink-3); }
