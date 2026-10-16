@@ -1,5 +1,7 @@
 # 도쿄 DR (개인 OCI 프리티어, Terraform)
 
+> **현재 상태 (2026-10-17)**: VCN·서브넷·보안 목록·백업 버킷·PAR 은 생성되어 매시간 암호화 백업을 받고 있다. 인스턴스 `rentwise-dr` 은 도쿄 Always Free A1 용량 부족(`Out of host capacity`)으로 기동하지 못해 **코드로만 정의**해 두었다. 용량이 생기면 `terraform apply` 한 번으로 만들고 7장 절차로 전환한다. 설계 배경: [INFRASTRUCTURE.md](INFRASTRUCTURE.md) 6장.
+
 서울(주최측 테넌시) 운영 환경의 **리전 간 백업 + 웜 스탠바이**를 개인 테넌시 도쿄(홈 리전) Always Free 로 만든다.
 
 ```

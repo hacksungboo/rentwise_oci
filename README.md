@@ -11,6 +11,7 @@
 
 | 문서 | 내용 |
 |---|---|
+| [docs/INFRASTRUCTURE.md](docs/INFRASTRUCTURE.md) | **인프라 전체 설계**: 네트워크·DB 분리·CI/CD·백업 보안·도쿄 DR·모니터링 · [아키텍처 그림](docs/architecture/rentwise-oci.png) |
 | [docs/DEPLOY_GUIDE.md](docs/DEPLOY_GUIDE.md) | 서버 배포·점검·롤백 |
 | [docs/CICD.md](docs/CICD.md) | main 병합 시 자동 배포, Secrets 설정 |
 | [docs/DB_SPLIT.md](docs/DB_SPLIT.md) | DB 를 team-4-2 로 분리, 되돌리기 |
