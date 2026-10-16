@@ -7,7 +7,7 @@
    → web(nginx, Vue 정적 파일, /api 프록시) → api(FastAPI :8000) → db(Oracle Free :1521)
 ```
 
-- **서버 1대(team-4-1)**에 4개 컨테이너를 Compose 로 올립니다. team-4-2 는 예비입니다.
+- 앱(web·api·cloudflared)은 team-4-1, **DB 는 team-4-2** 에 둡니다 → [DB_SPLIT.md](DB_SPLIT.md). 서버 1대로 돌리려면 `.env` 에 `DB_HOST=db`, `COMPOSE_PROFILES=localdb`.
 - 외부에 여는 포트는 없습니다. HTTPS 는 Cloudflare 터널이 담당하고, DB·API 포트는 서버 밖으로 게시하지 않습니다.
 - 이미지는 **서버에서 직접 빌드**합니다(aarch64 네이티브라 QEMU 불필요, 레지스트리 인증 불필요).
 

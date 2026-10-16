@@ -13,6 +13,7 @@
 |---|---|
 | [docs/DEPLOY_GUIDE.md](docs/DEPLOY_GUIDE.md) | 서버 배포·점검·롤백 |
 | [docs/CICD.md](docs/CICD.md) | main 병합 시 자동 배포, Secrets 설정 |
+| [docs/DB_SPLIT.md](docs/DB_SPLIT.md) | DB 를 team-4-2 로 분리, 되돌리기 |
 | [docs/CLOUDFLARE_TUNNEL.md](docs/CLOUDFLARE_TUNNEL.md) | 도메인 연결 |
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | 구조, API, A·C 연동 지점, 명세와 다른 부분 |
 | [docs/LOCAL_DEV.md](docs/LOCAL_DEV.md) | 로컬 실행 |
