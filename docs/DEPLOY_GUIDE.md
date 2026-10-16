@@ -64,7 +64,7 @@ SMOKE_PASSWORD=<admin 비밀번호> ./scripts/smoke.sh   # 실제 Oracle 로 시
 
 - **첫 기동은 Oracle 초기화 때문에 3~5분** 걸립니다. `docker compose logs -f db` 에서 `DATABASE IS READY TO USE!` 를 확인하세요.
 - API 는 시작할 때 테이블을 만들고, DB 가 비어 있으면 시연 seed 를 넣습니다.
-- `smoke.sh` 는 시작과 끝에 시연 데이터를 초기화합니다. 측정 기록이 있으면 먼저 `./scripts/backup.sh`.
+- `smoke.sh` 는 시작과 끝에 시연 데이터를 초기화합니다. 측정 기록이 있으면 먼저 `./scripts/backup.sh` (복원: `./scripts/restore.sh <파일>`, 도쿄 업로드·매시간 실행은 [TOKYO_DR.md](TOKYO_DR.md)).
 
 ## 5. 업데이트 / 롤백
 
