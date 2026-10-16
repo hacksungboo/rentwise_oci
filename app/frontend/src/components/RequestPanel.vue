@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { api, ApiError, type Intent, type PlanView, type Reference, type RequestView } from '../api'
-import { CONFIRM_FIELD_LABEL, KIND_LABEL, fromLocalInput, time, toLocalInput } from '../format'
+import { CONFIRM_FIELD_LABEL, KIND_LABEL, addDays, fromLocalInput, time, toLocalInput } from '../format'
+import TimeField from './TimeField.vue'
 
 const props = defineProps<{ reference: Reference; stateRevision: number }>()
 const emit = defineEmits<{ (e: 'plan', p: PlanView): void }>()
@@ -89,10 +90,11 @@ function evidenceFor(opIndex: number, field: string) {
   return draft.value!.operations[opIndex].evidence.find((e) => e.path === field)?.quote
 }
 
-type TimeField = 'window_start' | 'window_end' | 'due_at'
-function setTime(i: number, f: TimeField, v: string) {
-  draft.value!.operations[i][f] = fromLocalInput(v)
-}
+// 선택 가능한 날짜: 요청 수신일부터 7일 (배정 계획 범위)
+const days = computed(() => {
+  const start = toLocalInput(req.value?.received_at ?? null).slice(0, 10)
+  return start ? Array.from({ length: 7 }, (_, n) => addDays(start, n)) : []
+})
 
 const confirmations = computed(() => draft.value?.needs_confirmation ?? [])
 function fieldOf(path: string) {
@@ -233,19 +235,16 @@ async function plan() {
             <span>수량</span>
             <input v-model.number="op.quantity" type="number" min="1" max="12" />
           </label>
-          <label class="field">
-            <span>방문 시작</span>
-            <input type="datetime-local" :value="toLocalInput(op.window_start)" @input="setTime(i, 'window_start', ($event.target as HTMLInputElement).value)" />
+          <div class="field">
+            <TimeField v-model="op.window_start" :days="days" label="방문 시작" />
             <em v-if="evidenceFor(i, 'window_start')">근거 “{{ evidenceFor(i, 'window_start') }}”</em>
-          </label>
-          <label class="field">
-            <span>방문 종료</span>
-            <input type="datetime-local" :value="toLocalInput(op.window_end)" @input="setTime(i, 'window_end', ($event.target as HTMLInputElement).value)" />
-          </label>
-          <label class="field">
-            <span>완료 기한</span>
-            <input type="datetime-local" :value="toLocalInput(op.due_at)" @input="setTime(i, 'due_at', ($event.target as HTMLInputElement).value)" />
-          </label>
+          </div>
+          <div class="field">
+            <TimeField v-model="op.window_end" :days="days" label="방문 종료" />
+          </div>
+          <div class="field">
+            <TimeField v-model="op.due_at" :days="days" label="완료 기한" />
+          </div>
         </div>
       </div>
 
