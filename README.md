@@ -16,6 +16,7 @@
 | [docs/CICD.md](docs/CICD.md) | main 병합 시 자동 배포, Secrets 설정 |
 | [docs/DB_SPLIT.md](docs/DB_SPLIT.md) | DB 를 team-4-2 로 분리, 되돌리기 |
 | [docs/TOKYO_DR.md](docs/TOKYO_DR.md) | 도쿄 리전 백업·DR (Terraform, 개인 프리티어) |
+| [docs/MONITORING.md](docs/MONITORING.md) | 모니터링: Alloy → Prometheus·Loki → Grafana, 설치·확인 |
 | [docs/AI_REAL_MODE.md](docs/AI_REAL_MODE.md) | real 모드(GPT 해석 + A 엔진) 켜기·확인·AI 호출 기록·비용 |
 | [docs/CLOUDFLARE_TUNNEL.md](docs/CLOUDFLARE_TUNNEL.md) | 도메인 연결 |
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | 구조, API, A·C 연동 지점, 명세와 다른 부분 |

@@ -24,7 +24,10 @@ def get(url, auth=None):
 
 def check(name, cond, detail=""):
     global ok
-    print(("✓ " if cond else "✗ ") + name + (f"  {detail}" if detail else ""))
+    line = ("✓ " if cond else "✗ ") + name + (f"  {detail}" if detail else "")
+    print(line)
+    if os.environ.get("GITHUB_ACTIONS"):
+        print(("::notice title=monitoring::" if cond else "::error title=monitoring::") + line)
     ok &= bool(cond)
 
 
