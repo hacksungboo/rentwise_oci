@@ -103,7 +103,7 @@ def test_extract_uses_shared_schema_metadata_and_minimal_context():
     assert 'private_contact' not in body['input'][1]['content']
     assert body['input'][0] == {'role': 'developer', 'content': INSTRUCTIONS}
     assert ledger.settled[0][2] == PRICE_VERSION and not ledger.unknown
-    assert ledger.reservations[0][2] == Decimal('.0044')
+    assert ledger.reservations[0][2] == Decimal('.0064')
     assert inp.model_dump() == before
 
 

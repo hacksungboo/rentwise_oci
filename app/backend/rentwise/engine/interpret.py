@@ -29,7 +29,8 @@ PROMPT_VERSION = 'rental-extract-v1.1'
 PRICE_VERSION = 'openai-standard-2026-10-16'
 # USD per million tokens, verified against official model documentation.
 PRICES = {'gpt-5.6-luna': (Decimal('.20'), Decimal('.02'), Decimal('1.20'))}
-INPUT_LIMIT = 8000
+INPUT_LIMIT = 16000  # Full UTF-8 request bytes + framing; also the conservative token ceiling.
+INPUT_FRAMING_HEADROOM = 256
 OUTPUT_LIMIT = 2000
 _ACTIVE_CALL = Lock()  # one AI call per backend process; multi-worker limit belongs to B
 
@@ -202,8 +203,8 @@ class OpenAIInterpreter:
                 {'role': 'user', 'content': json.dumps(context, ensure_ascii=False)}],
             'text': {'format': {'type': 'json_schema', 'name': 'rental_intent', 'strict': True, 'schema': schema}}}
         # UTF-8 byte bound is deliberately stricter than a tokenizer estimate.
-        # Includes schema, instructions and 256 tokens of message framing headroom.
-        if len(json.dumps(body, ensure_ascii=False).encode('utf-8')) + 256 > INPUT_LIMIT:
+        # Includes schema, instructions and fixed framing headroom; not a token count.
+        if len(json.dumps(body, ensure_ascii=False).encode('utf-8')) + INPUT_FRAMING_HEADROOM > INPUT_LIMIT:
             return result(code='AI_INPUT_TOO_LARGE')
         if not _ACTIVE_CALL.acquire(blocking=False):
             return result(code='AI_BUSY', retryable=True)
