@@ -82,12 +82,15 @@ terraform output -raw backup_upload_url        # 복사 (채팅·GitHub 금지)
 
 # team-4-1
 cd ~/rentwise_oci/infra && git pull
+openssl rand -base64 32                        # 암호화 키 생성 → 비밀번호 관리자에도 보관 (잃으면 복원 불가)
 vi .env                                        # BACKUP_UPLOAD_URL=https://objectstorage.ap-tokyo-1.oraclecloud.com/p/.../o/
+                                               # BACKUP_ENCRYPT_KEY=<위에서 만든 값>
 ./scripts/backup.sh                            # 1회 시험: ... upload=ok:rentwise/seoul/rentwise-<시각>.json.gz
 ./scripts/install-backup-cron.sh               # 매시간 17분 자동 실행
 tail -f backups/backup.log                     # 실행 기록
 ```
 
+- **보안**: 전송은 HTTPS(TLS), 버킷은 비공개·저장 시 암호화. 그 위에 업로드 파일 자체를 AES-256(PBKDF2 20만 회)으로 암호화하고 HMAC-SHA256 으로 위변조를 검사한다. 업로드 URL 은 쓰기 전용이라 새어도 기존 백업을 읽거나 지울 수 없고, 조회 URL 이 새도 키 없이는 내용을 읽을 수 없다. 키가 없으면 업로드하지 않는다.
 - 로컬 `infra/backups/` 에 최근 48개 보관, 버킷에는 계속 쌓인다(파일 수 KB, 20GB 무료 한도와 무관).
 - OCI 콘솔 → Object Storage → `rentwise-backup` → `rentwise/seoul/` 에서 파일이 보이면 성공.
 - 업로드 실패 시 로그에 `upload=FAIL`, 스크립트 종료 코드 1.
@@ -112,6 +115,7 @@ cd ~/rentwise_oci/infra && cp .env.example .env && vi .env
 #   CLOUDFLARE_TUNNEL_TOKEN=<dr 터널 토큰>, PUBLIC_HOSTNAME=dr.rentwise.ccmall.shop
 #   SERVER_LABEL=OCI ap-tokyo-1 · rentwise-dr
 #   BACKUP_READ_URL=<terraform output -raw backup_read_url>
+#   BACKUP_ENCRYPT_KEY=<서울과 같은 값>
 echo "$GHCR_TOKEN" | docker login ghcr.io -u <github id> --password-stdin   # 패키지가 비공개면
 ./scripts/deploy-image.sh <서울과 같은 커밋 SHA>     # Oracle 첫 기동 3~5분
 ./scripts/restore.sh latest                          # 서울 최신 백업 적용 → 소요 시간이 RTO

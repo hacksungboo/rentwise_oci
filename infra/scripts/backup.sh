@@ -2,6 +2,8 @@
 # 앱 데이터 논리 백업 → infra/backups/ (+ 도쿄 Object Storage 업로드)
 #   ./scripts/backup.sh              # 앱 서버(team-4-1)에서. api 컨테이너가 DB 를 읽어 JSON 으로 내보냄
 # .env 의 BACKUP_UPLOAD_URL(쓰기 전용 사전 인증 URL, .../o/ 로 끝남)이 있으면 업로드한다.
+# 업로드 파일은 BACKUP_ENCRYPT_KEY 로 암호화(AES-256-CBC, PBKDF2) + 위변조 검사(HMAC-SHA256)한다. 키가 없으면 업로드하지 않는다.
+#   파일 형식: 첫 줄 "rwenc1 <hmac 64자>" + 암호문.  로컬 backups/ 에는 평문 gzip 을 둔다(서버 디스크).
 # 매시간 실행은 ./scripts/install-backup-cron.sh
 set -euo pipefail
 cd "$(dirname "$0")/.."                       # infra/
@@ -23,11 +25,21 @@ REV="$(gunzip -c "$F" | docker compose exec -T api python -m rentwise.backup sum
 
 UP="skip"
 if [ -n "$URL" ]; then
-  OBJ="rentwise/$LABEL/rentwise-$TS.json.gz"
-  if curl -fsS --retry 3 --max-time 60 -T "$F" -H "Content-Type: application/gzip" "${URL}${OBJ}" -o /dev/null; then
-    UP="ok:$OBJ"
-  else
+  KEY="$(envval BACKUP_ENCRYPT_KEY)"
+  if [ -z "$KEY" ]; then
+    echo "BACKUP_ENCRYPT_KEY 가 없어 업로드하지 않습니다 (openssl rand -base64 32 로 만들어 .env 에 추가)" >&2
     UP="FAIL"
+  else
+    E="$(mktemp)"; trap 'rm -f "$E" "$E.c"' EXIT
+    BK="$KEY" openssl enc -aes-256-cbc -pbkdf2 -iter 200000 -salt -pass env:BK -in "$F" -out "$E.c"
+    MAC="$(openssl dgst -sha256 -hmac "$KEY:mac" -r < "$E.c" | cut -d' ' -f1)"
+    { printf 'rwenc1 %s\n' "$MAC"; cat "$E.c"; } > "$E"
+    OBJ="rentwise/$LABEL/rentwise-$TS.json.gz.enc"
+    if curl -fsS --retry 3 --max-time 60 -T "$E" -H "Content-Type: application/octet-stream" "${URL}${OBJ}" -o /dev/null; then
+      UP="ok:$OBJ"
+    else
+      UP="FAIL"
+    fi
   fi
 fi
 
