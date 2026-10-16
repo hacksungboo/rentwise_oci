@@ -16,7 +16,9 @@ from pydantic import ValidationError
 from rentwise.contracts import types as c
 from rentwise.contracts.v2.schema import ContractError, timestamp
 
-VERSION = 'rental-solver-b-v1-2'
+from . import execution
+
+VERSION = 'rental-solver-b-v1-3'
 TABLES = ('locations', 'customers', 'items', 'assets', 'rentals', 'reservations',
           'employees', 'shifts', 'jobs', 'plan_items', 'dependencies', 'travel_times')
 FROZEN = {'IN_PROGRESS', 'COMPLETED', 'FAILED'}
@@ -33,8 +35,8 @@ def span(row):
     return a, b
 
 
-def signature(p, *, employee=True):
-    return ((p['employee_id'],) if employee else ()) + (tuple(p['asset_ids']),
+def signature(p, *, employee=True, assets=True):
+    return ((p['employee_id'],) if employee else ()) + ((tuple(p['asset_ids']),) if assets else ()) + (
         timestamp(p['start_at']), timestamp(p['end_at']),
         tuple((s['kind'],s['from_id'],s['to_id'],*span(s)) for s in p['segments']))
 
@@ -79,7 +81,7 @@ def inspect(snapshot):
         a=timestamp(r['start_at'])
         if r['end_at'] is not None and timestamp(r['end_at'])<=a:
             raise ContractError(['snapshot.reservations.interval'])
-        if r['rental_id'] is not None and ix['rentals'][r['rental_id']]['asset_id']!=r['asset_id']:
+        if r['status']=='ACTIVE' and r['rental_id'] is not None and ix['rentals'][r['rental_id']]['asset_id']!=r['asset_id']:
             raise ContractError(['snapshot.reservations.rental_asset'])
     for item in snapshot['items']:
         if type(item['prep_minutes']) is not int or item['prep_minutes']<0 or any(type(item['service_minutes_by_kind'][k]) is not int or item['service_minutes_by_kind'][k]<=0 for k in ('DELIVERY','PICKUP','AS','TRANSFER')):
@@ -110,7 +112,8 @@ def inspect(snapshot):
     return ix,travel,warehouses[0]
 
 
-def validate(snapshot, candidate):
+def validate(snapshot, candidate, *, new_jobs=(), movable_jobs=(), replaceable_jobs=(), as_of=None):
+    """new_jobs is internal: declare only after rebuilding approved job creates."""
     try:
         ix,travel,warehouse = inspect(snapshot)
         rows=[p.model_dump() if isinstance(p,c.PlanItem) else c.PlanItem.model_validate(p).model_dump() for p in candidate]
@@ -122,6 +125,9 @@ def validate(snapshot, candidate):
         errors=[]
         def fail(code,jid=None,eid=None):
             errors.append(c.Violation(code=code,job_ids=[jid] if jid else [],employee_ids=[eid] if eid else []))
+        if as_of is not None:
+            for code,jid,eid in execution.violations(snapshot, rows, as_of):
+                fail(code,jid,eid)
         customer_at={r['location_id']:r for r in snapshot['customers']}
         services={}
         for p in rows:
@@ -137,9 +143,9 @@ def validate(snapshot, candidate):
             if jid in old:
                 if j['status'] in FROZEN and signature(p)!=signature(old[jid]):
                     fail('FIXED_JOB_CHANGED',jid)
-                if kind!='AS' and signature(p,employee=False)!=signature(old[jid],employee=False):
+                if kind!='AS' and jid not in movable_jobs and signature(p,employee=False,assets=jid not in replaceable_jobs)!=signature(old[jid],employee=False,assets=jid not in replaceable_jobs):
                     fail('B_V1_TIME_CHANGE_UNSUPPORTED',jid)
-            else:
+            elif jid not in new_jobs:
                 fail('NEW_JOB_UNSUPPORTED',jid)
             for prev,nxt in zip(segs,segs[1:]):
                 if span(prev)[1]>span(nxt)[0] or prev['to_id']!=nxt['from_id']:
@@ -275,9 +281,9 @@ def availability(inp, as_of):
         ix,travel,warehouse=inspect(inp.snapshot)
         start,end=max(timestamp(inp.from_at),timestamp(as_of)),timestamp(inp.to_at)
         if start>=end: raise ContractError(['from_at/to_at'])
-        check=validate(inp.snapshot,inp.snapshot['plan_items'])
+        check=validate(inp.snapshot,inp.snapshot['plan_items'],as_of=as_of)
         if check.status=='DATA_MISSING': raise ContractError(check.missing_fields)
-        blocked=set()
+        blocked={aid for j in inp.snapshot['jobs'] if j['status']=='IN_PROGRESS' for aid in j['asset_ids']}
         for violation in check.violations:
             if not violation.job_ids: blocked.update(ix['assets'])
             for jid in violation.job_ids:
@@ -337,12 +343,14 @@ def solve(inp, as_of):
         ix,travel,warehouse=inspect(inp.snapshot)
         if {r['version'] for r in inp.snapshot['travel_times']}!={inp.travel_version}:
             return result('DATA_MISSING',code='TRAVEL_VERSION_MISMATCH')
-        check=validate(inp.snapshot,inp.snapshot['plan_items'])
+        check=validate(inp.snapshot,inp.snapshot['plan_items'],as_of=as_of)
         if check.status=='DATA_MISSING': return result('DATA_MISSING',code='BASE_PLAN_INVALID',violations=check.violations)
         if not 1<=inp.max_candidates<=1000 or not 1<=inp.max_search_ms<=2000:
             return result('DATA_MISSING',code='INVALID_SEARCH_LIMIT')
         if not timedelta(0)<timestamp(inp.horizon_end)-timestamp(inp.horizon_start)<=timedelta(days=7): return result('DATA_MISSING',code='INVALID_HORIZON')
         if {p['plan_id'] for p in inp.snapshot['plan_items']}!={inp.base_plan_id}: return result('NEEDS_REVIEW',code='STALE_PLAN')
+        if execution.stale_jobs(inp.snapshot, as_of):
+            return result('NEEDS_REVIEW',code='EXECUTION_STATUS_REQUIRED',violations=check.violations)
         jobs=deepcopy(ix['jobs']); old={p['job_id']:p for p in inp.snapshot['plan_items']}
         overrides={o['job_id']:o for o in inp.overrides}
         if len(overrides)!=len(inp.overrides): return result('NEEDS_REVIEW',code='INVALID_OVERRIDE')
@@ -385,7 +393,7 @@ def solve(inp, as_of):
             if depth==len(affected):
                 rows=[selected.get(jid,deepcopy(p)) for jid,p in sorted(old.items())]
                 candidate_snapshot={**inp.snapshot,'jobs':list(jobs.values())}
-                checked=validate(candidate_snapshot,rows)
+                checked=validate(candidate_snapshot,rows,as_of=as_of)
                 if checked.status=='VALID':
                     key=(sum(p['employee_id']!=old[p['job_id']]['employee_id'] for p in rows),
                          tuple((p['employee_id'] or '',p['start_at'],p['job_id']) for p in rows))

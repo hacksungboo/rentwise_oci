@@ -1,6 +1,6 @@
 """A planning engines, with B's unchanged v1 RealEngine entry point.
 
-RealEngine uses B v1 DTOs and limits candidates to B's current write capability.
+RealEngine uses B v1 DTOs; optional recovery/delivery require B confirmation hooks.
 Direct solve/validate/availability functions retain the independent v2 core API.
 See docs/handoffs/A.md for supported operations and remaining product limits.
 """

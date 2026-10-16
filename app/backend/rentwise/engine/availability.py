@@ -62,7 +62,7 @@ def availability(input: JSONRecord) -> AvailabilityResult:
     for p in baseline["plan_items"]:
         p["plan_id"] = baseline["plan_id"]
     validation = validate(snapshot, baseline)
-    blocked = set()
+    blocked = {aid for j in snapshot["jobs"] if j["status"] == "IN_PROGRESS" for aid in j["asset_ids"]}
     if validation["status"] == "DATA_MISSING":
         blocked.update(ix["assets"])
     for v in validation["violations"]:

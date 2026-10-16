@@ -270,7 +270,7 @@ def test_real_b_delay_request_uses_v2_core_and_confirm_writes_full_candidate(adm
     draft=admin.post('/api/v1/plans',json={'request_id':req['id'],'interpretation_revision':saved.json()['interpretation']['revision'],'base_state_revision':7})
     # B v2 bridge (2026-10-17): delayed pickup goes through A's v2 core, not the v1 compat solver.
     assert draft.status_code==201 and draft.json()['status']=='READY',draft.text
-    assert draft.json()['solver_version']=='rental-solver-normal-delay-v1'
+    assert draft.json()['solver_version']=='rental-solver-normal-delay-v2'
     with database.get_db_engine().connect() as conn: assert database.read_snapshot(conn)==before  # draft writes nothing
     done=admin.post(f"/api/v1/plans/{draft.json()['id']}/confirm",json={'expected_plan_revision':1,'base_state_revision':7})
     assert done.status_code==200,done.text

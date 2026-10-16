@@ -70,3 +70,8 @@ TEL-048 결과: 기존 DTO와 두 인자 validate만 사용하는 native v1 Real
 PASS `cd app/backend && .venv/bin/python -m pytest -q`:107 tests(v2 67+v1 33+B7), 외부 anyio deprecation1. PASS diff 공백/문서 링크, B 소유 코드/DTO/seed 무변경 검사. NOT CONFIGURED scripts/check.sh(없음). SKIPPED 프런트/infra 재빌드(변경 없음), 화면/Oracle/모델/C gold. Review 상태이며 codex/a-engine / PR #2에서 검토한다. 배포는 미실행이다.
 
 커밋 전 최종 검사: PASS backend pytest107개, PASS frontend npm run build(Vite30 modules, 로컬 Node24.19.0/npm10.9.2). B 코드/DTO/DB/seed/프런트/infra는 변경하지 않았다. GitHub CI 결과는 PR 최신 head에서 별도로 확인한다.
+
+## TEL-056 — 밀린 A 변경 통합·commit/push/PR (In Progress)
+
+Owner A/Codex, branch feat/a-engine-updates, latest main9666202. 사용자 요청으로 TEL-052 회수 native adapter·TEL-053 신규 납품·TEL-054 당일 실행 보호·TEL-055 AI 입력 한도를 새 integration checkout에 통합한다. 원본 dirty checkout 세 곳은 checksum으로 보존한다. 소유 engine/, tests/engine/, A 인계/README/ARCHITECTURE/AI_REAL_MODE와 작업 기록; B services/DB/contracts/프런트/infra·C seed/gold는 제외한다.
+순서: native recovery와 delivery의 공용 v1/Facade를 결합하고 회수 prepare에도 현재시각 보호 적용 → 전체 backend/B HTTP/C busy FakeClient 및 frontend checks → 기능/AI입력/연결문서 범위별 커밋 → remote push/main PR/CI 확인. B의 기존 v2 회수 bridge는 그대로 유지하고 native adapter를 자동 활성화하지 않는다. PR·push는 승인됐고 main 병합/배포/유료 호출은 범위 밖이다.

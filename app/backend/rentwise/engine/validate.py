@@ -6,6 +6,7 @@ from datetime import timedelta
 from rentwise.contracts.v2.schema import ContractError, check_contract, timestamp
 from rentwise.contracts.v2.types import CandidatePlan, JSONRecord, ValidationResult
 
+from . import execution
 from .common import FROZEN, check_references, duration, interval, overlaps, route_fits
 
 
@@ -27,6 +28,9 @@ def validate(snapshot: JSONRecord, complete_candidate_plan: CandidatePlan) -> Va
     def fail(code, *, jobs=(), assets=(), employees=(), span=None, expected=None, actual=None):
         violations.append(dict(code=code, job_ids=list(jobs), asset_ids=list(assets),
                                employee_ids=list(employees), interval=span, expected=expected, actual=actual))
+
+    for code, jid, eid in execution.violations(snapshot, candidate["plan_items"], snapshot["as_of"], segments="segments_json"):
+        fail(code, jobs=[jid], employees=[eid] if eid else [])
 
     if candidate["base_state_revision"] != snapshot["state_revision"]:
         fail("STALE_SNAPSHOT", expected=snapshot["state_revision"], actual=candidate["base_state_revision"])
