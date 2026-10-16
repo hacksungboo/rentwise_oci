@@ -1,0 +1,87 @@
+# rentwise 단일 서버 배포 (team-4-1, aarch64)
+#
+#   브라우저 ─HTTPS→ Cloudflare(rentwise.ccmall.shop) ─터널→ cloudflared → web(nginx:80) ─/api→ api(:8000) → db(Oracle:1521)
+#
+# 외부로 게시하는 포트 없음. web 의 127.0.0.1:8080 은 서버 안에서 디버깅용.
+# 실행: cd infra && cp .env.example .env (값 채우기) && ./scripts/deploy.sh
+
+name: rentwise
+
+services:
+  db:
+    image: ${DB_IMAGE:-gvenzl/oracle-free:23-slim}
+    container_name: rentwise-db
+    restart: unless-stopped
+    environment:
+      ORACLE_PASSWORD: ${ORACLE_PASSWORD:?ORACLE_PASSWORD를 .env에 넣으세요}
+      APP_USER: ${DB_USER:-rentwise}
+      APP_USER_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD를 .env에 넣으세요}
+    volumes:
+      - oracle-data:/opt/oracle/oradata
+    networks: [dbnet]
+    healthcheck:
+      test: ["CMD", "healthcheck.sh"]
+      interval: 15s
+      timeout: 10s
+      retries: 40
+      start_period: 180s
+    logging: &logging
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }
+
+  api:
+    build:
+      context: ../app
+      dockerfile: backend/Dockerfile
+      args:
+        BUILD_SHA: ${BUILD_SHA:-local}
+    image: rentwise-api:${IMAGE_TAG:-local}
+    container_name: rentwise-api
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: oracle+oracledb://${DB_USER:-rentwise}:${DB_PASSWORD}@db:1521/?service_name=${DB_SERVICE:-FREEPDB1}
+      DB_WAIT_SECONDS: "600"
+      ENGINE_MODE: ${ENGINE_MODE:-mock}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      SESSION_SECRET: ${SESSION_SECRET:?SESSION_SECRET을 .env에 넣으세요}
+      COOKIE_SECURE: ${COOKIE_SECURE:-true}
+      ALLOWED_ORIGINS: https://${PUBLIC_HOSTNAME:-rentwise.ccmall.shop},http://127.0.0.1:8080,http://localhost:8080
+      DEMO_ACCOUNTS: ${DEMO_ACCOUNTS:?DEMO_ACCOUNTS를 .env에 넣으세요}
+      BUILD_SHA: ${BUILD_SHA:-local}
+      IMAGE_TAG: ${IMAGE_TAG:-local}
+      SERVER_LABEL: ${SERVER_LABEL:-}
+    networks: [web, dbnet]
+    logging: *logging
+
+  web:
+    build:
+      context: ../app/frontend
+    image: rentwise-web:${IMAGE_TAG:-local}
+    container_name: rentwise-web
+    restart: unless-stopped
+    depends_on: [api]
+    ports:
+      - "127.0.0.1:8080:80"
+    networks: [web]
+    logging: *logging
+
+  cloudflared:
+    image: cloudflare/cloudflared:2024.12.2
+    container_name: rentwise-tunnel
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run
+    environment:
+      TUNNEL_TOKEN: ${CLOUDFLARE_TUNNEL_TOKEN:?CLOUDFLARE_TUNNEL_TOKEN을 .env에 넣으세요}
+    depends_on: [web]
+    networks: [web]
+    logging: *logging
+
+networks:
+  web: {}
+  dbnet: {}   # db 는 dbnet 에만. api 는 OpenAI 호출(외부 443)이 필요하므로 internal 로 막지 않음
+
+volumes:
+  oracle-data: {}

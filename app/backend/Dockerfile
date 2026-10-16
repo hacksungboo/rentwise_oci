@@ -1,0 +1,22 @@
+# 빌드 컨텍스트: app/  (backend + fixtures/v1 만 이미지에 포함. eval/ 정답은 절대 포함하지 않음)
+# docker build -f app/backend/Dockerfile app
+FROM python:3.12-slim
+
+ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 PIP_NO_CACHE_DIR=1
+WORKDIR /app/backend
+
+COPY backend/requirements.txt .
+RUN pip install -r requirements.txt
+
+COPY backend/rentwise ./rentwise
+COPY fixtures/v1 /app/fixtures/v1
+
+ARG BUILD_SHA=local
+ENV BUILD_SHA=${BUILD_SHA} SEED_PATH=/app/fixtures/v1/seed.json
+
+RUN useradd -r -u 10001 rentwise
+USER rentwise
+EXPOSE 8000
+HEALTHCHECK --interval=15s --timeout=3s --start-period=60s --retries=10 \
+  CMD python -c "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/api/v1/health/ready',timeout=2).status==200 else 1)"
+CMD ["uvicorn", "rentwise.main:app", "--host", "0.0.0.0", "--port", "8000", "--proxy-headers", "--forwarded-allow-ips", "*"]
