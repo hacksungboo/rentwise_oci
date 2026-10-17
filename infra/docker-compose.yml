@@ -50,6 +50,7 @@ services:
       DATABASE_URL: oracle+oracledb://${DB_USER:-rentwise}:${DB_PASSWORD}@${DB_HOST:-db}:${DB_PORT:-1521}/?service_name=${DB_SERVICE:-FREEPDB1}
       DB_WAIT_SECONDS: "600"
       ENGINE_MODE: ${ENGINE_MODE:-mock}
+      SEED_PATH: ${SEED_PATH:-/app/fixtures/v1/seed.json}   # 시연 초기화·자동 적재에 쓸 seed (이미지 안 경로)
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       OPENAI_MODEL: ${OPENAI_MODEL:-gpt-5.6-luna}
       AI_BUDGET_USD: ${AI_BUDGET_USD:-0}
