@@ -181,15 +181,15 @@ edge(users, cf, "HTTPS Request", font=10)
 
 # ---------------------------------------------------------------- 서울
 region(20, 110, 1130, 700, "<b>OCI Region</b> - Seoul (ap-seoul-1)")
-vcn(50, 150, 1070, 640, "<b>VCN</b>  10.0.0.x")
+vcn(50, 150, 1070, 640, "<b>VCN</b>  (provided by organizer)")
 icon("vcn", 1080, 140, "", size=26)
 igw = icon("igw", 336, 130, "", size=38)
 text(215, 122, 115, 20, "Internet Gateway", font=10, align="right")
-ad(80, 190, 1010, 580, "<b>Availability Domain 1</b> (AP-SEOUL-1-AD-1)")
-vcn(100, 225, 970, 525, "<b>Subnet</b>  10.0.0.0/24", sub=True)
+ad(80, 190, 1010, 580, "<b>Availability Domain 1</b> (AP-SEOUL-1-AD-1)  ·  Fault Domain 1")
+vcn(100, 225, 970, 525, "<b>Public Subnet</b>  10.0.0.0/24  ·  GW 10.0.0.1", sub=True)
 
 # team-4-1
-app_node = node(125, 265, 440, 460, "<b>team-4-1</b>  10.0.0.198\n<font color='#7A736E'>App Server · A1.Flex 4 OCPU / 22GB</font>")
+app_node = node(125, 265, 440, 460, "<b>team-4-1</b>  10.0.0.198\n<font color='#7A736E'>App Server · A1.Flex 4 OCPU / 24GB</font>")
 icon("flexvm", 522, 273, "", size=32)
 icon("b:docker.svg", 484, 276, "", size=30)
 tun = icon("b:cloudflared.svg", 158, 350, "Cloudflared", size=44, font=10)
@@ -207,7 +207,7 @@ edge(web_anchor, api, "/api", font=10)
 edge(api, eng, "")
 
 # team-4-2
-node(600, 265, 445, 460, "<b>team-4-2</b>  10.0.0.218\n<font color='#7A736E'>DB &amp; Monitoring · A1.Flex 4 OCPU / 22GB</font>")
+node(600, 265, 445, 460, "<b>team-4-2</b>  10.0.0.218\n<font color='#7A736E'>DB &amp; Monitoring · A1.Flex 4 OCPU / 24GB</font>")
 icon("flexvm", 1002, 273, "", size=32)
 icon("b:docker.svg", 964, 276, "", size=30)
 db = icon("b:oracle.svg", 650, 352, "Oracle AI DB 26ai Free", size=42, font=10, lw=140)

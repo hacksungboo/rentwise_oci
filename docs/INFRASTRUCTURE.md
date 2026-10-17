@@ -9,8 +9,8 @@
 사용자 ─HTTPS─▶ Cloudflare (rentwise.ccmall.shop, TLS 종료)
                     │  Cloudflare Tunnel (서버가 밖으로 연결, 인바운드 포트 0개)
 ┌ OCI 서울 ap-seoul-1 (주최측 테넌시) ─────────────────────────────────────────────┐
-│ VCN · 사설 서브넷 10.0.0.0/24                                                     │
-│  team-4-1  10.0.0.198  A1.Flex 4 OCPU / 22GB       team-4-2  10.0.0.218  A1.Flex  │
+│ VCN(주최측) · 퍼블릭 서브넷 10.0.0.0/24 · AD-1 · Fault Domain 1                   │
+│  team-4-1  10.0.0.198  A1.Flex 4 OCPU / 24GB       team-4-2  10.0.0.218  A1.Flex  │
 │   cloudflared → web(nginx) → api(FastAPI) ──1521──▶  Oracle AI Database 26ai Free │
 │   backup.sh (매시간)                                 (모니터링 스택 예정)           │
 └───────────────│───────────────────────────────────────────────────────────────────┘
@@ -25,8 +25,9 @@ GitHub (PR → CI) → main 병합 → Actions(ARM64 빌드) → GHCR → SSH �
 | 항목 | 값 |
 |---|---|
 | 서비스 주소 | https://rentwise.ccmall.shop |
-| 앱 서버 | team-4-1 · 사설 10.0.0.198 · VM.Standard.A1.Flex(aarch64) 4 OCPU / 22GB |
-| DB 서버 | team-4-2 · 사설 10.0.0.218 · VM.Standard.A1.Flex(aarch64) 4 OCPU / 22GB |
+| 네트워크 | 리전 ap-seoul-1 · AP-SEOUL-1-AD-1 · 두 서버 모두 FAULT-DOMAIN-1 · 퍼블릭 서브넷 10.0.0.0/24 (게이트웨이 10.0.0.1) · VCN CIDR 은 주최측 관리 |
+| 앱 서버 | team-4-1 · 사설 10.0.0.198 · VM.Standard.A1.Flex(aarch64) 4 OCPU / 24GB |
+| DB 서버 | team-4-2 · 사설 10.0.0.218 · VM.Standard.A1.Flex(aarch64) 4 OCPU / 24GB |
 | DB | Oracle AI Database 26ai Free (`gvenzl/oracle-free:23-slim`), PDB `FREEPDB1` |
 | 앱 | Vue 3 + nginx(web), FastAPI(api), Docker Compose |
 | 외부 공개 | Cloudflare Tunnel 만 (서버에 80/443 인바운드 없음) |
@@ -152,7 +153,7 @@ team-4-2 Alloy ─┴──▶ Prometheus(메트릭, 3일) · Loki(로그, 3일)
 - 대시보드: 서비스 상태, API 요청·오류(nginx 로그), **AI 해석 호출**(api 로그의 `ai.interpret` 줄: 성공/실패, 토큰, 지연), 로그 검색.
 - 보안: 모두 host 네트워크 + firewalld 로 3000·3100·9090 을 team-4-1 사설 IP 에서만 허용, Grafana 는 터널로만 공개(로그인 필수).
 - CI 가 PR 마다 전체 스택을 띄워 대시보드의 모든 쿼리를 실제로 실행해 확인한다.
-- 4-2 에 두는 이유: 수집 경로가 사설망 안에서 끝나 외부 노출이 없고, 서버 여유(22GB)가 충분하다(추가 약 1GB). 도쿄는 테넌시가 달라 수집 경로를 인터넷에 열어야 해서 제외.
+- 4-2 에 두는 이유: 수집 경로가 사설망 안에서 끝나 외부 노출이 없고, 서버 여유(24GB 중 사용 약 3GB)가 충분하다(추가 약 1GB). 도쿄는 테넌시가 달라 수집 경로를 인터넷에 열어야 해서 제외.
 
 ## 8. 보안 요약
 
@@ -166,6 +167,7 @@ team-4-2 Alloy ─┴──▶ Prometheus(메트릭, 3일) · Loki(로그, 3일)
 
 | 항목 | 현재 | 다음 |
 |---|---|---|
+| 장애 도메인 | 두 서버가 같은 FAULT-DOMAIN-1 | 서로 다른 Fault Domain 에 배치(하드웨어 장애 분리) |
 | 앱 서버 이중화 | 단일(team-4-1) | OCI LB + 앱 2대 또는 블루/그린 |
 | DB 고가용성 | 단일 + 매시간 백업 | 유료 에디션 Data Guard / Autonomous DB |
 | 도쿄 DR | 백업 저장·IaC 준비, 인스턴스 미기동 | 용량 확보 시 웜 스탠바이 상시 기동, 정기 복원 리허설 |
