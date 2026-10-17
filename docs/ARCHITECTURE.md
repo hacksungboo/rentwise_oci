@@ -103,3 +103,8 @@ A `engine/execution.py`를 native v1/신규 납품과 B가 호출하는 v2 core�
 설명은 AI의 사실ID정렬→서버 facts 렌더를 유지하면서 presentation_version/markdown을 추가하고 기존 plain 필드를 보존한다. Vue MarkdownText는 제목/목록/강조/인용만 Vue보간으로 렌더해 rawHTML·링크 실행을 하지 않는다. 표시를 위한 추가 모델 호출은 없다.
 
 확정 후 CustomerMessage가 ADMIN GET /plans/{id}/customer-message로 현재 확정 계획과 수신 고객의 직접 대상 작업을 읽는다. 짧은 workspace 잠금 아래 revision·HUMAN해석·수신 범위를 검증하고 고객 방문 SERVICE 시각으로 SYSTEM초안을 생성한다. 복사 직전 재조회하며 메시지 저장·외부발송·모델호출은 없다. 단일/큐 공통으로 최근 확정 ID를 상위 App에 전달하고 화면 수명 안에서 표시한다. 이전 계획/다른 고객 혼합은 차단, 미호출 퀵은 업체확인필요 안내다. [운영·비용](AI_REAL_MODE.md#4-비용-tel-065-terra-기본값).
+
+
+### A/S 새 약속의 검증과 저장 (TEL-067)
+
+A v1-5는 AS RESCHEDULE의 명시적인 새 방문창·완료 기한을 계산에 적용한다. B plans.confirm은 잠금 안에서 최신 HUMAN/전체 확인 및 정규화 operations 동일성을 검사한 뒤 AS 세 필드만 복사 snapshot에 반영해 validator를 호출한다. 다른 작업 조건·실제 상태·예약·고객/근무표는 현재 DB 값 그대로다. 검증 후 기존 Job 갱신/계획 교체/revision+1을 원자 커밋한다. 이전의 “기존 AS 방문창 안 변경만 지원” 제한은 이 경로에서 대체되며 다른 업무의 v1 제한은 유지한다.

@@ -179,9 +179,18 @@ function suggestion(path: string): { label: string; apply: () => void } | null {
   }
   if (f === 'due_at' && op.window_start) {
     const existing = props.reference.jobs.find((j) => j.id === op.target_job_id)
-    if (op.kind === 'AS' && existing?.due_at) {
-      const due = existing.due_at
-      return { label: `기존 완료 기한 (${time(due)})`, apply: () => (op.due_at = due) }
+    if (op.kind === 'AS') {
+      const item = props.reference.items.find((it) => it.id === op.item_id)
+      const minutes = item?.service_minutes_by_kind?.AS
+      const completion = minutes ? new Date(new Date(op.window_start).getTime() + minutes * 60_000).toISOString() : null
+      const end = op.window_end && new Date(op.window_end) > new Date(op.window_start)
+        && (!completion || new Date(op.window_end) >= new Date(completion)) ? op.window_end : completion
+      if (!end) return null // An unknown service duration must be reviewed explicitly.
+      if (existing?.due_at && new Date(existing.due_at).getTime() >= new Date(end).getTime()) {
+        const due = existing.due_at
+        return { label: `기존 완료 기한 (${time(due)})`, apply: () => (op.due_at = due) }
+      }
+      return { label: `방문 종료 기준 (${time(end)})`, apply: () => (op.due_at = toKst(end)) }
     }
     const day = toLocalInput(op.window_start).slice(0, 10)
     return { label: '당일 17:00', apply: () => (op.due_at = `${day}T17:00:00+09:00`) }

@@ -236,3 +236,15 @@ TEL-066 결과 — Review(2026-10-17). 운영 제공 로그로 Terra 호출 정�
 PASS 최종 backend479(27.51s,명시busy/FakeClient/SQLite,외부anyio경고1): 기존478+신규설치2건거절/보류/첫확정보존1. 관련51개도PASS. frontend configuredtypecheck/build46modules, node --test tests/*.test.mjs18개(기존Markdown4+HTTP8+실제Vue메모리renderer복구6) PASS. CI frontend에 npm test추가/새패키지없음. 공유root sh scripts/check.sh bootstrap·문서·기존A69 PASS(실제앱과별도). 초기시험보조코드/실행경로오류는수정후최종전부통과. SKIPPED 사용자지정 수동화면/실제유료모델·운영Oracle·다중서버·배포, NOT CONFIGURED 실제repo rootcheck/backend별도lint/type/build. 운영원본변경없음, 신규납품반납일/무기한확인UI·자동배정연결은별도미구현범위. 기본승인에따라commit/push/PR예정, 병합·배포없음.
 
 제출 직전 최신main03682c6(PR24)은 monitoring/alloy IPv4 probe만 바뀌었고 검증한 앱 코드와 차이가 없다. 해당 인프라 변경을 보존해 rebase하며 앱 검증 결과는 동일 코드에 적용된다.
+
+
+## TEL-067 — A/S 오후 변경 추천·확정 조건 교정 (In Progress)
+
+2026-10-17 · Owner Codex A/B · fix/a-as-reschedule-window · maina906caa(PR25병합). 캡처: 오전AS를16시로바꿔도기존11:30기한추천,17:30기한확인시B_V1_PERSISTENCE_UNSUPPORTED. 원인: FE 기존기한무조건추천 + A v1의기존방문창/기한안으로만AS변경허용, Bconfirm도변경전Job조건으로재검증. B저장코드는이미ops의새window/due원자저장가능.
+소유 RequestPanel·v1solver·Bplans확정검증·행동시험/문서. 계획: 새방문완료보다이른기한추천제외/방문완료기준추천→AS만명시확인된창/기한확장허용(타종류기존경계유지)→확정잠금안최신HUMAN/동일normalizedops검사후AS3조건만복사한snapshot으로독립검증,DB원자갱신→무료busy/표준seed16시·17:30계산확정/보존·stale/제약/rollback·Vue추천회귀. 실제직원실시간/신규설치/가격·모델·schema/Cgold변경없음.
+수용:16시AS에11:30추천안함;기존기한이새완료를수용하면유지추천;새16~16:30/17:30승인시조건가능하면READY→확정/재조회새Job조건저장,초안원본불변;고객창/근무·휴식/고정상태·부정확시간·stale·타작업변경은계속차단. 자동검증후commit/push/PR기본승인,수동화면/유료/운영변경/병합·배포없음.
+
+
+TEL-067 결과 — Review(2026-10-17). FE는기존완료기한이새방문종료/최소현장소요를수용할때만추천,아니면새완료기준추천(사람클릭필수·소요미상시추정안함·이전날/잘못남은종료방어). A v1-5 AS RESCHEDULE만기존창/기한밖새조건허용,방문창순서·완료기한/타업무저장제한유지. B확정은최신HUMAN/모든확인·동일정규화ops를검사후AS3조건만복사snapshot에서독립검증,기존원자저장/revision사용. 다른고객창/근무·휴식·기술·이동/장비·예약·고정상태는완화않음. B추가연결은포함됐고소유자review대상. 새schema/env/모델·예산/공용계약/Cseed·gold변경없음.
+PASS backend전체494(28.44s,기존479+AS15회귀,명시운영busy/FakeClient/SQLite·외부anyio경고1). 실제busy원본사본의가람AS16~16:30/기한17:30→READY→확정r8→고객안내재조회/전체일정169·타작업·예약/대여/장비보존. B개발seed는WP40분이라16~16:40으로별도검증(원본fixture변경없음). 새창독립확정검사/최신HUMAN/storedops불일치/stale/고객창변경/고정상태/시간순서/rollback 포함. 초기시험에서대상선택/seed별소요시간40·30차이를잘못가정한부분은수정후최종통과.
+PASS frontendconfiguredtypecheck/build46modules + node25(기존18+AS추천7,실제Vue메모리renderer). 기존기한유지/16시변경·선택종료/이전날·소요미상·stale종료/사람클릭검증. root sh scripts/check.sh bootstrap·문서·기존A69 PASS(별도repo). SKIPPED 사용자지정수동화면/유료실호출/운영Oracle·다중서버/배포, NOT CONFIGURED 실제repo rootcheck/backend독립lint/type/build. 운영원본/고객데이터수정없음. 최신maina906caa불변,기본승인으로commit/push/PR제출예정. 배포후기존실패초안은조건확인/재계산필요,데이터초기화불필요.

@@ -10,6 +10,7 @@ import hashlib
 import logging
 import json
 import uuid
+from copy import deepcopy
 from datetime import timedelta
 from typing import Any
 
@@ -242,6 +243,32 @@ def plan_view(conn: Connection, plan_id: str) -> dict:
     return pd
 
 
+def _reviewed_as_snapshot(conn: Connection, p, snapshot: dict) -> dict:
+    """Validate new AS promises without changing DB or unrelated job conditions."""
+    ops = json.loads(p.operations_json or "[]")
+    as_ops = [o for o in ops if o.get("operation") == "RESCHEDULE" and o.get("kind") == "AS"]
+    if not as_ops:
+        return snapshot
+    latest = latest_interpretation(conn, p.request_id) if p.request_id else None
+    if latest is None or latest["origin"] != "HUMAN" or latest["revision"] != p.interpretation_revision:
+        raise ApiError(409, "STALE_INTERPRETATION", "최신 A/S 조건을 확인하고 변경안을 다시 계산해 주세요.", retryable=True)
+    if any(q["path"] not in latest["acknowledged_paths"] for q in latest["payload"]["needs_confirmation"]):
+        raise ApiError(422, "UNCONFIRMED_FIELDS", "확인이 필요한 A/S 조건이 남아 있습니다.")
+    normalized, _ = _normalize(conn, latest["payload"], snapshot)
+    if [o.model_dump() for o in normalized] != ops:
+        raise ApiError(409, "STALE_INTERPRETATION", "저장된 변경안과 A/S 확인 조건이 다릅니다. 다시 계산해 주세요.", retryable=True)
+    reviewed = deepcopy(snapshot)
+    jobs = {j["id"]: j for j in reviewed["jobs"]}
+    for op in as_ops:
+        job = jobs.get(op.get("target_job_id"))
+        if job is None or job["kind"] != "AS":
+            raise ApiError(422, "INVALID_OPERATION_KIND", "A/S 대상 작업을 다시 확인해 주세요.")
+        if any(op.get(f) is None for f in ("window_start", "window_end", "due_at")):
+            raise ApiError(422, "UNCONFIRMED_FIELDS", "A/S 방문창과 완료 기한을 확인해 주세요.")
+        job.update({f: op[f] for f in ("window_start", "window_end", "due_at")})
+    return reviewed
+
+
 # --------------------------------------------------------------------------- 확정·보류
 def confirm(conn: Connection, plan_id: str, expected_plan_revision: int, base_state_revision: int,
             actor: str, trace_id: str) -> dict:
@@ -281,7 +308,8 @@ def confirm(conn: Connection, plan_id: str, expected_plan_revision: int, base_st
                                              **_horizon()})
         vr = v2_bridge.validate(v2snap, v2_candidate)
     else:
-        vr = get_engine().validate(snapshot, [PlanItem(**{k: v for k, v in c.items() if k in PlanItem.model_fields})
+        reviewed = _reviewed_as_snapshot(conn, p, snapshot)
+        vr = get_engine().validate(reviewed, [PlanItem(**{k: v for k, v in c.items() if k in PlanItem.model_fields})
                                               for c in cand])
     if vr.status != "VALID":
         raise ApiError(422, "CONSTRAINT_VIOLATION", "제약 위반이 있어 확정할 수 없습니다.",

@@ -78,7 +78,7 @@ SELECT status, COUNT(*), SUM(NVL(settled_usd, reserved_usd)) FROM rw_ai_ledger G
 |---|---|
 | 회수 지연 (기존 PICKUP 일정 변경) | A v2 core: 회수 직원 재배정, 준비 이동, 다음 납품 같은 모델 대체, 예약·대여·의존 갱신 |
 | 기존 납품 일정 변경 | A v2 core: 내부 인력 우선, 부족 시 책임자 확인용 퀵 배정안 |
-| 기존 A/S 방문창 안 시각 변경, 직원 변경 | A v1 호환 엔진 |
+| 사람이 확인한 기존 A/S 방문창·완료 기한 변경, 직원 변경 | A v1 호환 엔진 (TEL-067) |
 | 신규 납품·이동·장비 지정 변경 등 | 검토 필요(NEEDS_REVIEW)로 확정 차단 |
 
 
@@ -115,7 +115,7 @@ API: 관리자 `POST /api/v1/plans/{plan_id}/explanation`, body `{expected_plan_
 
 기존 DELIVERY 변경도 v2 core로 계산한다. 내부 직원 계획부터 찾고, 별도 인력 검사에서 부족이 확인될 때만 퀵 배정 변경안/당일 회수의 다음 근무일 제안을 만든다. 실제 업체 호출·수락·결제는 별도이고 책임자 확정 전 운영 자원을 바꾸지 않는다. 장비·준비·방문창·기한은 완화하지 않는다. 단일 요청/대기열의 기존 계산·확정 API에 연결했으며 새 환경변수/모델 호출/비용 정책은 없다.
 
-버전: v2 `rental-solver-normal-delay-v2-1`, v1 `rental-solver-b-v1-4`, 내부 정책 `dispatch-fallback-v1`. `PROMPT_VERSION=rental-extract-v1.1`/설명 `rental-plan-explain-v1.0`/입력16000은 그대로이며, 후속 TEL-065의 모델·가격·예약은 §4를 따른다. 여러 날짜의 대안 탐색은 총 2초 보장이 아니며 단계별 제한·자원 표현·확정 계약은 [DISPATCH_FALLBACK.md](DISPATCH_FALLBACK.md)를 따른다.
+버전: v2 `rental-solver-normal-delay-v2-1`, v1 `rental-solver-b-v1-5`(TEL-067 A/S 새 조건 검증), 내부 정책 `dispatch-fallback-v1`. `PROMPT_VERSION=rental-extract-v1.1`/설명 `rental-plan-explain-v1.0`/입력16000은 그대로이며, 후속 TEL-065의 모델·가격·예약은 §4를 따른다. 여러 날짜의 대안 탐색은 총 2초 보장이 아니며 단계별 제한·자원 표현·확정 계약은 [DISPATCH_FALLBACK.md](DISPATCH_FALLBACK.md)를 따른다.
 
 TEL-063은 busy-v1의 TRANSFER 방문창 오판과 실패 시 전체 삭제처럼 보이던 미리보기를 수정한다. 불가능한 요청은 오류와 현재 일정으로 남으며 확정할 수 없다. seed/gold는 수정하지 않았다.
 
@@ -129,3 +129,12 @@ TEL-063은 busy-v1의 TRANSFER 방문창 오판과 실패 시 전체 삭제처�
 ### 검토 화면의 지원 범위 오류 (TEL-066)
 
 `AI_REVIEW_UNSUPPORTED`는 AI 추출 이후 B 확인 화면에서 편집할 수 없는 항목(예: 신규 설치의 반납일·무기한 여부 확인)이 있어 멈춘 경우다. HTTP422/retryable=false와 `error.details.paths`를 반환한다. 모델 연결/설정 오류와 구분하며 동일 원문 재시도는 해결책이 아니다. 신규 설치는 사유를 적어 보류하고 별도 검토한다. 실제 연결 오류와 큐 복구 절차는 [대기열 인계](REQUEST_QUEUE.md#tel-066--해석-거절과-연결-오류-구분복구)를 따른다.
+
+
+### A/S 방문 시각·완료 기한 변경 (TEL-067)
+
+기존 오전 A/S를 오후로 옮길 때 과거 완료 기한을 무조건 유지하지 않는다. 새 방문 종료를 수용하는 경우에만 기존 기한을 추천하고, 그렇지 않으면 입력한 방문 종료 또는 품목별 현장 소요시간으로 계산한 종료를 추천한다. 추천은 사람이 눌러 확인해야 적용되며, 기한은 별도로 수정할 수 있다. 방문 종료와 현장 실제 완료 기록은 별개다.
+
+AS RESCHEDULE에 한해 기존 방문창·기한 밖의 새 조건을 계산할 수 있다. B는 확정 잠금 안에서 최신 HUMAN/확인항목과 저장한 정규화 작업이 일치하는지 검사하고, 해당 AS의 window_start/window_end/due_at만 복사한 검증 snapshot으로 독립 검증한다. 고객 방문창/직원·기술/근무·휴식/이동/다른 작업·고정 상태/장비/의존 제약을 완화하지 않는다. 통과 시 기존 트랜잭션에서 새 조건과 계획을 함께 저장하고 revision을 올린다. 초안 단계는 운영 Job 불변이며 새 schema/env/모델 호출은 없다.
+
+busy-v1 WP-A는30분, B 개발 seed WP-A는40분이다. 같은16시 시작의 방문 종료는 각각16:30/16:40으로 계산해야 한다. 실제 가능 여부는 근무표/고객 창에 따라 달라지며17:30 기한 입력만으로 READY를 보장하지 않는다. 타 업무 종류의 v1 저장 제한은 그대로다.

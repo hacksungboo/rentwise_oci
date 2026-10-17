@@ -1,7 +1,8 @@
-"""B's unchanged v1 planning boundary.
+"""B v1 planning boundary with reviewed AS promise changes.
 
-Only staff changes and AS service moves inside existing promises are writable
-by this solver. No candidate requires B to update rentals or dependencies.
+Staff changes and reviewed AS visit/deadline changes are writable by this
+solver; B confirms AS conditions with the same reviewed operation.
+No candidate requires B to update rentals or dependencies.
 B retains human review, revision/locking, and persistence responsibility.
 """
 from collections import Counter, defaultdict
@@ -18,7 +19,7 @@ from rentwise.contracts.v2.schema import ContractError, timestamp
 
 from . import execution, quick
 
-VERSION = 'rental-solver-b-v1-4'
+VERSION = 'rental-solver-b-v1-5'
 TABLES = ('locations', 'customers', 'items', 'assets', 'rentals', 'reservations',
           'employees', 'shifts', 'jobs', 'plan_items', 'dependencies', 'travel_times')
 FROZEN = {'IN_PROGRESS', 'COMPLETED', 'FAILED'}
@@ -381,8 +382,13 @@ def solve(inp, as_of):
                 if k in raw and raw[k] is not None and raw[k]!=j[k]: return result('NEEDS_REVIEW',code='B_V1_PERSISTENCE_UNSUPPORTED')
             if any(raw.get(k) is None for k in ('window_start','window_end','due_at')):
                 return result('NEEDS_REVIEW',code='UNCONFIRMED_FIELDS')
-            if not (timestamp(j['window_start'])<=timestamp(op.window_start)<timestamp(op.window_end)<=timestamp(j['window_end'])
-                    and timestamp(op.due_at)<=timestamp(j['due_at'])):
+            if op.kind == 'AS':
+                # B persists these three reviewed fields and revalidates them at
+                # confirmation. The old promise is not the new visit window.
+                if not timestamp(op.window_start)<timestamp(op.window_end)<=timestamp(op.due_at):
+                    return result('NEEDS_REVIEW',code='INVALID_WINDOW')
+            elif not (timestamp(j['window_start'])<=timestamp(op.window_start)<timestamp(op.window_end)<=timestamp(j['window_end'])
+                      and timestamp(op.due_at)<=timestamp(j['due_at'])):
                 return result('NEEDS_REVIEW',code='B_V1_PERSISTENCE_UNSUPPORTED')
             j.update(window_start=op.window_start,window_end=op.window_end,due_at=op.due_at)
             operations[j['id']]=op

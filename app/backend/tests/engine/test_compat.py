@@ -265,13 +265,16 @@ def test_existing_registry_can_construct_real_engine_without_new_arguments(monke
         engine_registry.get_engine.cache_clear()
 
 
-def test_as_window_cannot_expand_old_promise_or_change_asset_fields():
-    for change in ({'window_start':'2026-10-16T08:00:00+09:00'}, {'asset_ids':['W04']}):
-        op=dict(operation='RESCHEDULE',kind='AS',target_job_id='J-AS1',window_start='2026-10-16T10:00:00+09:00',
-            window_end='2026-10-16T11:00:00+09:00',due_at='2026-10-16T11:00:00+09:00')
-        op.update(change)
-        r=RealEngine().solve(request(operations=[op]))
-        assert r.status=='NEEDS_REVIEW' and r.candidate_items==[]
+@pytest.mark.parametrize('change,supported', [({'window_start':'2026-10-16T08:00:00+09:00'}, True), ({'asset_ids':['W04']}, False)])
+def test_reviewed_as_window_can_expand_but_cannot_change_asset_fields(change, supported):
+    op=dict(operation='RESCHEDULE',kind='AS',target_job_id='J-AS1',window_start='2026-10-16T10:00:00+09:00',
+        window_end='2026-10-16T11:00:00+09:00',due_at='2026-10-16T11:00:00+09:00')
+    op.update(change)
+    r=RealEngine().solve(request(operations=[op]))
+    if supported:
+        assert r.status == 'FEASIBLE', r
+    else:
+        assert r.status == 'NEEDS_REVIEW' and r.candidate_items == []
 
 
 def test_ready_count_and_conditional_boundary_respect_bookings_and_preparation():
@@ -311,3 +314,28 @@ def test_real_b_delay_request_uses_v2_core_and_confirm_writes_full_candidate(adm
     assert jobs['J-PICK1']['window_start']=='2026-10-16T14:00:00+09:00'
     assert jobs['J-DEL1']['asset_ids']==['P02'] and rentals['R-S2']['asset_id']=='P02'
     assert not any(d['id']=='D-PREP1-DEL1' for d in after['dependencies'])
+
+
+@pytest.mark.parametrize('change,code', [
+    ({'window_end': '2026-10-16T16:00:00+09:00'}, 'INVALID_WINDOW'),
+    ({'due_at': '2026-10-16T16:10:00+09:00'}, 'INVALID_WINDOW'),
+])
+def test_new_as_promises_still_require_valid_visit_and_deadline_order(change, code):
+    op = dict(operation='RESCHEDULE', kind='AS', target_job_id='J-AS1',
+        window_start='2026-10-16T16:00:00+09:00', window_end='2026-10-16T16:40:00+09:00',
+        due_at='2026-10-16T17:30:00+09:00')
+    op.update(change)
+    result = RealEngine().solve(request(operations=[op], overrides=[]))
+    assert result.status == 'NEEDS_REVIEW' and not result.candidate_items
+    assert result.unresolved[0].code == code
+
+
+@pytest.mark.parametrize('status', ['COMPLETED', 'IN_PROGRESS', 'FAILED'])
+def test_expanded_as_promise_cannot_move_frozen_work(status):
+    snap = public_snapshot()
+    next(j for j in snap['jobs'] if j['id'] == 'J-AS1')['status'] = status
+    op = dict(operation='RESCHEDULE', kind='AS', target_job_id='J-AS1',
+        window_start='2026-10-16T16:00:00+09:00', window_end='2026-10-16T16:40:00+09:00',
+        due_at='2026-10-16T17:30:00+09:00')
+    result = RealEngine().solve(request(snapshot=snap, operations=[op], overrides=[]))
+    assert result.status == 'NEEDS_REVIEW' and not result.candidate_items
