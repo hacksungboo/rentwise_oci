@@ -139,7 +139,7 @@ export interface Reference {
   customers: { id: string; name: string; location_id: string; preferred_employee_id: string | null }[]
   items: Item[]; assets: Asset[]; employees: { id: string; name: string }[]
   locations: { id: string; name: string }[]
-  jobs: { id: string; kind: string; from_id: string; to_id: string; asset_ids: string[]; window_start: string | null; due_at: string | null }[]
+  jobs: { id: string; kind: string; item_id?: string; from_id: string; to_id: string; asset_ids: string[]; window_start: string | null; due_at: string | null }[]
 }
 export interface Operation {
   operation: 'CREATE' | 'RESCHEDULE'; kind: 'DELIVERY' | 'PICKUP' | 'AS' | 'TRANSFER'

@@ -427,3 +427,23 @@ PASS 최종 backend479(27.51s,명시busy/FakeClient/SQLite,외부anyio경고1): 
 TEL-067 결과 — Review(2026-10-17). FE는기존완료기한이새방문종료/최소현장소요를수용할때만추천,아니면새완료기준추천(사람클릭필수·소요미상시추정안함·이전날/잘못남은종료방어). A v1-5 AS RESCHEDULE만기존창/기한밖새조건허용,방문창순서·완료기한/타업무저장제한유지. B확정은최신HUMAN/모든확인·동일정규화ops를검사후AS3조건만복사snapshot에서독립검증,기존원자저장/revision사용. 다른고객창/근무·휴식·기술·이동/장비·예약·고정상태는완화않음. B추가연결은포함됐고소유자review대상. 새schema/env/모델·예산/공용계약/Cseed·gold변경없음.
 PASS backend전체494(28.44s,기존479+AS15회귀,명시운영busy/FakeClient/SQLite·외부anyio경고1). 실제busy원본사본의가람AS16~16:30/기한17:30→READY→확정r8→고객안내재조회/전체일정169·타작업·예약/대여/장비보존. B개발seed는WP40분이라16~16:40으로별도검증(원본fixture변경없음). 새창독립확정검사/최신HUMAN/storedops불일치/stale/고객창변경/고정상태/시간순서/rollback 포함. 초기시험에서대상선택/seed별소요시간40·30차이를잘못가정한부분은수정후최종통과.
 PASS frontendconfiguredtypecheck/build46modules + node25(기존18+AS추천7,실제Vue메모리renderer). 기존기한유지/16시변경·선택종료/이전날·소요미상·stale종료/사람클릭검증. root sh scripts/check.sh bootstrap·문서·기존A69 PASS(별도repo). SKIPPED 사용자지정수동화면/유료실호출/운영Oracle·다중서버/배포, NOT CONFIGURED 실제repo rootcheck/backend독립lint/type/build. 운영원본/고객데이터수정없음. 최신maina906caa불변,기본승인으로commit/push/PR제출예정. 배포후기존실패초안은조건확인/재계산필요,데이터초기화불필요.
+
+
+## TEL-068 — 기존 약속 문맥 매칭·시간 확인 추천 (In Progress)
+
+2026-10-17 · Owner Codex A/B · fix/a-contextual-request-matching · maina906caa. PR26은현재main미병합이며별도보존,이수정은main에서분기해독립제출. 사용자원문: 오늘4시프린터설치를3시~3시반사이로당김. 운영busy자료상미르디자인C-B16의오늘16시PR-A납품J-B045가유일하며다른날/노트북납품이함께존재. 기존후처리가종류/고객만비교해대상선택을지우고barehour를모두null로만들어추천연쇄가멈춤.
+소유 engine 문맥매칭/intent_checks/b_review/interpret프롬프트·관련무료시험, RequestPanel 대상필터/날짜·품목표시/추천·실제TimeField연동시험,인계. 계획: 단일RESCHEDULE의명시적기존날짜·시각/변경방향/새숫자범위로후보를안전하게좁힘→유일한기존약속의오전/오후문맥에근거한확인용추천값(사람확인필수)→불명확/중복/자정·다중작업추론금지→UI품목/납품도착고객필터·날짜표시/추천연결→유료호출없이FakeClient/busy·실제Vue+TimeField행동시험. 임의직원/약속승인/자동확정·Cgold·가격/한도변경없음.
+수용:예문은J-B045·15~15:30확인초안,기존16시와신규15시구분/반=30분,이해석은오전오후문맥추천임을질문으로표시하고ack없으면계산차단. 겹치는후보·날짜미정/충돌시계속수동확인. 추천클릭시실제TimeField값/체크박스반영,고객/품목다른작업오선택방지. 사용자기본승인으로자동검증후commit/push/PR,수동화면/유료/운영변경/병합·배포없음.
+
+
+TEL-068 통합 전 검증: maina906caa 기준 backend493 PASS(28.78s,기존479+문맥13+busyHTTP1),frontend타입/build46/node20 PASS(기존18+실제TimeField추천/저장2). 실제busy예문은J-B045/15~15:30확인초안→ack없으면422→사람확인/기존16:30기한→READY→확정/타날짜J-B014·장비/169개보존,모델대역1회. PRICE/16000/출력2000/예약.064불변·38/120고객한도회귀PASS. PROMPT rental-extract-v1.2 / B후처리b-review-v2.
+진행중PR26이병합되어main38f9d16을가져왔으며AS수정도보존해통합검증예정. root sh scripts/check.sh FAIL: 별도 C측정문서docs/BUSY_V1_MEASUREMENT_PROTOCOL.md의누락엑셀링크(rental/fixtures/busy-v1/ops/운영현황_busy-v1_2026-10-16.xlsx). 이작업범위밖/다른담당자파일보존,실제앱테스트실패와구분하며후속미완료로남긴다. 사용자지정수동화면/유료/운영변경/배포는SKIPPED.
+
+
+TEL-068 최종 통합 결과 — Review. main38f9d16(PR26 AS+PR27 backup 포함) 위로 rebase. 충돌은 TASKS/A인계/AI운영/ARCH 문서의 동시 추가 부분 4개였으며 두 변경을 모두 보존했다. RequestPanel 코드는 자동 병합 후 A/S 추천7개를 포함해 재검증했다. 최신 PROMPT=rental-extract-v1.2, 검토 후처리=b-review-v2. 모델·가격·상한·시도 예약·공용 intent/DB schema·C 데이터는 변경하지 않았다.
+
+PASS 최종 backend508(30.60s, 기존494+문맥13+busyHTTP1), `RENTWISE_BUSY_SEED=/absolute/path/to/app/fixtures/v1/seed_busy.json python -m pytest -q`, FakeClient/SQLite·외부anyio경고1. 고정 운영 seed의 SHA256=dcd72cff4e4f61e945ca632a9c4de8328ee324a296352135301f380d0a1c0817, 기준일10/16. CI backend도 이 저장소 파일을 사용하도록 env를 연결해 기존 선택적 busy 시험을 생략하지 않게 했다. 전체 검증 중 공유 C 원본의 기준일이10/17로 바뀌면서 하드코딩된 기존 busy 시험6개가 실패한 실행도 있었다(502 PASS/6 FAIL). 해당 원본은 수정하지 않았고 고정 seed 전체508과 구분한다. 새 문맥 HTTP 시험은 seed anchor/서비스/엔진 시계를 함께 사용하도록 바꿨으며 변경된10/17 원본에서도1 PASS(2.09s)했다. 기존 날짜 고정 시험의 새 C 원본 전반 인수는 별도다.
+
+PASS frontend configured typecheck/build46modules/node27(기존25+실제 RequestPanel·TimeField·날짜/품목·도착고객 필터·추천클릭·체크/저장 payload2). 시작 공백이면 선행입력 안내→수동15시→현장15분 종료 추천→실제 입력 컨트롤 반영, 문맥15~15:30+기한16:30 추천과 원문 확인 저장을 검사했다. 타입 검사에서 날짜 null 처리 누락을 수정한 뒤 최종 통과했다. 실제 유료 호출/화면 수동/운영 Oracle·다중서버/배포 SKIPPED. 실제repo rootcheck/backend별도lint/type/build NOT CONFIGURED.
+
+공유 root `sh scripts/check.sh`는 FAIL 유지: 별도 측정 문서의 누락 엑셀 링크이며 다른 담당자 자료를 변경하지 않았다. 실제 앱/이 PR 문서 링크·변경 경계/비밀값/공백 검사와 분리한다. 운영 미검증과 공유 문서 문제를 완료로 숨기지 않는다. 동일 요청의 저장된 과거 해석은 자동 재과금/교체하지 않는다. 적용 후 단일 화면의 다시 입력으로 새로 해석해야 하며 원본 운영 초기화는 불필요하다. 기본 승인에 따라 commit/push/PR 제출, 병합·배포는 별도다.

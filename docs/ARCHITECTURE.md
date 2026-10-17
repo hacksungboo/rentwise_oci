@@ -108,3 +108,8 @@ A `engine/execution.py`를 native v1/신규 납품과 B가 호출하는 v2 core�
 ### A/S 새 약속의 검증과 저장 (TEL-067)
 
 A v1-5는 AS RESCHEDULE의 명시적인 새 방문창·완료 기한을 계산에 적용한다. B plans.confirm은 잠금 안에서 최신 HUMAN/전체 확인 및 정규화 operations 동일성을 검사한 뒤 AS 세 필드만 복사 snapshot에 반영해 validator를 호출한다. 다른 작업 조건·실제 상태·예약·고객/근무표는 현재 DB 값 그대로다. 검증 후 기존 Job 갱신/계획 교체/revision+1을 원자 커밋한다. 이전의 “기존 AS 방문창 안 변경만 지원” 제한은 이 경로에서 대체되며 다른 업무의 v1 제한은 유지한다.
+
+
+### 기존 약속의 문맥 기반 확인 초안 (TEL-068)
+
+AI 추출→intent_checks ID/근거검사→request_context 단일변경·명시기존날짜/시각·품목일치→b_review 확인용추천 순서다. 여러 작업/모호한 기존시각/다중 후보는 추론하지 않는다. 새시각의 오전/오후를 기존약속에서 추론했다면 AMBIGUOUS 질문을 유지하며 저장사실·AI 원문근거와 구분한다. B의 기존 사람확인 PUT/계획생성 ack검사를 그대로 사용한다. 화면은 실제 TimeField 컴포넌트와 추천값·체크박스·저장 payload까지 자동 회귀로 검증한다.

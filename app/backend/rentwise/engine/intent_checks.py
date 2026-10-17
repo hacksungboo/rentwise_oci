@@ -7,6 +7,7 @@ import re
 
 from rentwise.contracts import types as c
 from rentwise.timeutil import KST
+from .request_context import candidates, match_change
 
 TIME_FIELDS = ('window_start', 'window_end', 'due_at', 'rental_end_at')
 JOB_FIELDS = ('id', 'kind', 'customer_id', 'item_id', 'asset_ids', 'window_start', 'window_end', 'due_at')
@@ -114,6 +115,11 @@ def check_intent(raw: str, inp: c.InterpretationInput, schema: dict) -> c.Intent
                     setattr(op, field, None)
                     confirm(prefix + field, '이름이 같은 고객 중 대상을 선택해 주세요.', 'AMBIGUOUS')
 
+        context = match_change(inp, op) if len(intent.operations) == 1 else None
+        if context:
+            if op.target_job_id and op.target_job_id != context['job']['id']:
+                raise ValueError('job does not match referenced old visit')
+            op.target_job_id = context['job']['id']
         job = jobs.get(op.target_job_id)
         if op.operation == 'CREATE' and job:
             raise ValueError('new request cannot target existing job')
@@ -121,7 +127,7 @@ def check_intent(raw: str, inp: c.InterpretationInput, schema: dict) -> c.Intent
             customer = op.destination_customer_id if op.kind == 'DELIVERY' else op.source_customer_id
             if job['kind'] != op.kind or (customer is not None and job.get('customer_id') != customer):
                 raise ValueError('job does not match customer/kind')
-            matches = [j for j in jobs.values() if j['kind'] == op.kind and j.get('customer_id') == job.get('customer_id')]
+            matches = [context['job']] if context else candidates(inp, op)
             if len(matches) > 1 and op.target_job_id not in inp.text:
                 op.target_job_id = None
                 confirm(prefix + 'target_job_id', '동일 종류의 기존 업무가 여러 개입니다. 변경할 업무를 선택해 주세요.', 'AMBIGUOUS')

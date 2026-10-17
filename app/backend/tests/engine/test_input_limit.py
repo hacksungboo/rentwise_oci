@@ -40,7 +40,7 @@ def test_representative_customer_lists_pass_without_trimming_context(count):
     assert len(sent['candidate_customers']) == count
     assert inp.model_dump() == before
     assert budget.reservations[0][2] == Decimal('.064')
-    assert result.call.prompt_version == PROMPT_VERSION == 'rental-extract-v1.1'
+    assert result.call.prompt_version == PROMPT_VERSION == 'rental-extract-v1.2'
     assert budget.settled[0][2] == PRICE_VERSION == 'openai-standard-2026-10-17-terra'
 
 
