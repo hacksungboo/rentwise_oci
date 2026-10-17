@@ -399,3 +399,6 @@ PASS IAB/FakeClient·격리busy: 모델두호출Terra assert→조건사람확�
 사용자 지시: 이후 기본 검증에서 브라우저 수동 화면 확인은 생략한다. 관련 자동 테스트·타입 검사·빌드와 변경 범위/비밀값 검토를 완료하면 별도 확인 질문 없이 작업 브랜치에 커밋·푸시하고 main 대상 PR을 생성한다. 자동 검증 실패나 미검증 항목은 숨기지 않는다. 화면 확인을 별도로 요청하면 해당 요청을 따른다. 이 승인은 main 병합·운영 배포·유료 모델 호출·고객 메시지 발송을 포함하지 않는다.
 
 TEL-065도 이 제출 승인에 포함된다. 최신 main3f988e3에는 PR20과 모니터링이 병합되어 있으므로 작업을 보존한 채 최신 main으로 rebase하고 자동 회귀 검증 후 제출한다. 앞선 “commit/push/PR 없음”은 당시 상태이며 이 지시로 대체된다. B 소유 API/services/frontend/infra 경로는 PR에 명시하고 소유자 리뷰 상태를 구분한다.
+
+
+TEL-065 제출 전 통합 검증(2026-10-17): 최신 origin/main3f988e3(PR20·모니터링 포함)에 rebase 충돌 없이 완료. 기능 커밋 f36eddd. 최종 통합본 backend 전체 **478 PASS**,28.36s/외부anyio deprecation1(`RENTWISE_BUSY_SEED=/absolute/path/to/seed_busy.json python -m pytest -q`, 실제 운영busy fixture/FakeClient/격리SQLite). frontend configured typecheck·build46modules/node 마크다운4 PASS, 공유root sh scripts/check.sh bootstrap/문서·기존A69 PASS(실제앱과별도), diff공백/31파일비밀값패턴 PASS. 임시 node_modules symlink 제거. 사용자 지정으로 제출 단계 브라우저 수동 확인 생략, 기존 구현 단계 화면 증거는 보존. 유료호출/운영배포/병합 없음. B 경로 소유자 리뷰·실제 모델/Oracle 인수 대기, 기존 운영env Terra 변경/API재기동은후속. 이 검증은 제출 기능 커밋과 동일한 코드에 대한 결과이며 후속 변경은 인계 문서뿐이다.
