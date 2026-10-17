@@ -1,0 +1,14 @@
+# 대부분의 메트릭은 각 서버 Alloy 가 remote write 로 밀어 넣는다. 여기서는 모니터링 자체만 직접 수집.
+global:
+  scrape_interval: 30s
+  evaluation_interval: 30s
+
+scrape_configs:
+  - job_name: prometheus
+    static_configs:
+      - targets: ["127.0.0.1:9090"]
+        labels: { host: team-4-2 }
+  - job_name: loki
+    static_configs:
+      - targets: ["127.0.0.1:3100"]
+        labels: { host: team-4-2 }

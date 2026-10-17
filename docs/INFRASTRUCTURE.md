@@ -140,7 +140,7 @@ cron: 매시간 17분 (scripts/install-backup-cron.sh), 기록: infra/backups/ba
 - **앱은 이식 가능하다**: 같은 aarch64 이미지·같은 compose·단일 서버 모드, 복원 스크립트 `restore.sh latest` 로 버킷 최신 백업을 내려받아 위변조 검사·복호화·복원까지 한 번에 한다.
 - 전환 절차·리허설 순서: [TOKYO_DR.md](TOKYO_DR.md) 7~8장.
 
-## 7. 모니터링 (배포 예정, team-4-2)
+## 7. 모니터링 (team-4-2) — 상세: [MONITORING.md](MONITORING.md)
 
 ```
 team-4-1 Alloy ─┐ (사설망 push)                team-4-2
@@ -150,6 +150,8 @@ team-4-2 Alloy ─┴──▶ Prometheus(메트릭, 3일) · Loki(로그, 3일)
 
 - 수집: 호스트 CPU·메모리·디스크, 컨테이너 상태·재시작, 모든 컨테이너 로그(api·web·db·cloudflared).
 - 대시보드: 서비스 상태, API 요청·오류(nginx 로그), **AI 해석 호출**(api 로그의 `ai.interpret` 줄: 성공/실패, 토큰, 지연), 로그 검색.
+- 보안: 모두 host 네트워크 + firewalld 로 3000·3100·9090 을 team-4-1 사설 IP 에서만 허용, Grafana 는 터널로만 공개(로그인 필수).
+- CI 가 PR 마다 전체 스택을 띄워 대시보드의 모든 쿼리를 실제로 실행해 확인한다.
 - 4-2 에 두는 이유: 수집 경로가 사설망 안에서 끝나 외부 노출이 없고, 서버 여유(22GB)가 충분하다(추가 약 1GB). 도쿄는 테넌시가 달라 수집 경로를 인터넷에 열어야 해서 제외.
 
 ## 8. 보안 요약
@@ -168,4 +170,4 @@ team-4-2 Alloy ─┴──▶ Prometheus(메트릭, 3일) · Loki(로그, 3일)
 | DB 고가용성 | 단일 + 매시간 백업 | 유료 에디션 Data Guard / Autonomous DB |
 | 도쿄 DR | 백업 저장·IaC 준비, 인스턴스 미기동 | 용량 확보 시 웜 스탠바이 상시 기동, 정기 복원 리허설 |
 | RPO | ≤ 1시간 | 백업 주기 단축 또는 변경 로그 전송 |
-| 모니터링 | 설계 완료 | team-4-2 배포, 알림(디스코드/메일) 연동 |
+| 모니터링 | Alloy·Prometheus·Loki·Grafana | 알림(디스코드/메일) 연동 |
