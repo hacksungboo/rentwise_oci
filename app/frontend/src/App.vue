@@ -29,6 +29,12 @@ function changeMode(mode: 'single' | 'queue') {
   plan.value = null
   requestMode.value = mode
 }
+const timingContext = computed(() => ops.value && version.value && reference.value ? ({
+  build_sha: version.value.build_sha, engine_mode: ops.value.workspace.engine_mode,
+  dataset_version: ops.value.workspace.dataset_version, clock_anchor: ops.value.workspace.clock_anchor,
+  state_revision: ops.value.workspace.state_revision, current_plan_id: ops.value.workspace.current_plan_id,
+  total_assets: ops.value.total_assets, employees: reference.value.employees.length, customers: reference.value.customers.length,
+}) : undefined)
 const showSystem = ref(false)
 let toastTimer: number | undefined
 
@@ -207,7 +213,7 @@ const isAdmin = computed(() => user.value?.role === 'ADMIN')
             <button class="btn" :class="{ primary: requestMode === 'queue' }" @click="changeMode('queue')">3건 순차 처리</button>
             <button class="btn" :class="{ primary: requestMode === 'single' }" @click="changeMode('single')">단일 요청</button>
           </nav>
-          <RequestQueue v-if="requestMode === 'queue'" :key="panelKey" :reference="reference" :state-revision="ops.workspace.state_revision"
+          <RequestQueue v-if="requestMode === 'queue'" :key="panelKey" :reference="reference" :state-revision="ops.workspace.state_revision" :timing-context="timingContext"
                         @preview="(p) => (plan = p)" @changed="load" @confirmed="(r) => (receiptPlanId = r.confirmed_plan_id)" />
           <template v-else>
             <PlanReview v-if="plan" :plan="plan" @confirmed="onConfirmed" @held="onHeld" @cancel="onCancel" />

@@ -3,8 +3,10 @@ import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { api, requestError, requestKey, type RequestError, type PlanView, type QueueInput, type Reference, type RequestQueue, type RequestView } from '../api'
 import PlanReview from './PlanReview.vue'
 import RequestPanel from './RequestPanel.vue'
+import QueueMeasurement from './QueueMeasurement.vue'
+import type { TimingContext } from '../queueTiming'
 
-const props = defineProps<{ reference: Reference; stateRevision: number }>()
+const props = defineProps<{ reference: Reference; stateRevision: number; timingContext?: TimingContext }>()
 const emit = defineEmits<{
   (e: 'preview', value: PlanView | null): void
   (e: 'changed'): void
@@ -153,6 +155,7 @@ onUnmounted(() => { alive = false })
 
 <template>
   <div class="queue" aria-label="요청 대기열">
+    <QueueMeasurement :context="timingContext" :can-start="loaded && (!queue || composing) && !busy" />
     <section class="queue-card">
       <header>
         <h2>요청 대기열</h2>

@@ -447,3 +447,11 @@ PASS 최종 backend508(30.60s, 기존494+문맥13+busyHTTP1), `RENTWISE_BUSY_SEE
 PASS frontend configured typecheck/build46modules/node27(기존25+실제 RequestPanel·TimeField·날짜/품목·도착고객 필터·추천클릭·체크/저장 payload2). 시작 공백이면 선행입력 안내→수동15시→현장15분 종료 추천→실제 입력 컨트롤 반영, 문맥15~15:30+기한16:30 추천과 원문 확인 저장을 검사했다. 타입 검사에서 날짜 null 처리 누락을 수정한 뒤 최종 통과했다. 실제 유료 호출/화면 수동/운영 Oracle·다중서버/배포 SKIPPED. 실제repo rootcheck/backend별도lint/type/build NOT CONFIGURED.
 
 공유 root `sh scripts/check.sh`는 FAIL 유지: 별도 측정 문서의 누락 엑셀 링크이며 다른 담당자 자료를 변경하지 않았다. 실제 앱/이 PR 문서 링크·변경 경계/비밀값/공백 검사와 분리한다. 운영 미검증과 공유 문서 문제를 완료로 숨기지 않는다. 동일 요청의 저장된 과거 해석은 자동 재과금/교체하지 않는다. 적용 후 단일 화면의 다시 입력으로 새로 해석해야 하며 원본 운영 초기화는 불필요하다. 기본 승인에 따라 commit/push/PR 제출, 병합·배포는 별도다.
+
+## TEL-069 — 3건 순차 처리 계측·사업성 가정 (Review)
+
+2026-10-17 · Codex A/B · feat/a-queue-timing · base main4ea904a. opt-in 측정 패널을 기존 RequestQueue에 추가했다. 새3건접수 POST 시작~3번째확정/보류 응답까지 단조시계로 API해석/설명·계산·기타와 API없는 사람확인추정을 분리한다. 겹친 API는 구간우선순위로 한번만 계산, 선행대기는 보조값. 실패·재시도·SYSTEM설명·미해결·보류·누락응답/탭숨김·중단 기록, JSON/CSV다운로드·배포/seed/초기revision·계획chain·확정revision 메타데이터. 순수provider/solver시간·품질·실제AI 증거/원장청구는 별도이며 브라우저메모리만사용/새로고침전저장필요. [절차](../QUEUE_MEASUREMENT.md). 새DB/env/패키지·AI자동호출·큐정책변경없음. B소유 FE/API타입 연계는이번PR내포함·소유자review대상, 서버연결추가작업없음.
+
+[사업성 모델](../BUSINESS_CASE.md): 수동5/10/15분 및 플랫폼1분은 가정·실적아님. 제공운영usage3성공쌍은 해석+설명$0.0067~0.0087 추산(영수증/쓰기토큰미대조/실패별도), 계획단가$0.015로220/660/2200건월비$3.30/$9.90/$33. 시간가치와실현현금ROI·구매현금회피/감가중복을구분. 비전은동일약속준수·수요에서장비당공헌이익/가용재고/퀵비·총원가검증이며현재fleet전역최소화/수요예측·실재고감축은미구현/미측정. 공식OpenAI가격2026-10-17 재확인. 요청·응답시간의추산이실제사업ROI임을뜻하지않는다.
+
+TEL-069 검증: PASS backend508/29.58s(FakeClient/격리SQLite/저장소고정10/16 busy운영seed,외부anyio경고1); FE 기존configured script의 node직접실행으로 vue-tsc/38시험/50modules build PASS(npm실행파일없음,기존번들runtime/deps사용). 계측11회귀는3건분리합계/선행대기중복제외·병렬구간·오류/재시도·보류·SYSTEM fallback·외부결정/숨김/중단·CSV주입방어·관찰자실패독립·실제Vue+API3건/16호출·늦은설명경계검사포함. 신문서링크/원가·ROI계산/13파일secret pattern/diff공백 PASS. 공유root sh scripts/check.sh는 bootstrap/문서PASS뒤 기존A69중1실패(OUT_OF_HORIZON,대표seed 날짜고정시험)/68PASS: 이번FE측정변경과별도이고타원본보존. 실제앱rootcheck/backend독립lint/type/build NOTCONFIGURED. 사용자정책수동화면/실REAL유료·사람전후/Oracle·다중서버/배포/재고ROI실증 SKIPPED. 새측정UI는배포후관리자큐에서열며서버env/DB추가설정불필요,동결seed와실모델예산·독립판정은실험전에따로준비한다.

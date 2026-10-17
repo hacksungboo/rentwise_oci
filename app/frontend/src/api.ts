@@ -12,7 +12,36 @@ export class ApiError extends Error {
   }
 }
 
+// Read-only observers are opt-in; their failures must never change an API result.
+export interface ApiObservation {
+  stage: 'start' | 'end'; id: number; method: string; path: string; started_ms: number
+  ended_ms?: number; request_id?: string; result?: unknown; error_code?: string
+}
+const observers = new Set<(event: ApiObservation) => void>()
+let observationId = 0
+export function observeApi(observer: (event: ApiObservation) => void) {
+  observers.add(observer)
+  return () => { observers.delete(observer) }
+}
+function notifyApi(event: ApiObservation) {
+  for (const observer of observers) { try { observer(event) } catch { /* Measurement cannot break work. */ } }
+}
 async function call<T>(method: string, path: string, body?: unknown, headers: Record<string, string> = {}): Promise<T> {
+  const base = { id: ++observationId, method, path, started_ms: performance.now(),
+    request_id: (body as { request_id?: string } | undefined)?.request_id }
+  notifyApi({ ...base, stage: 'start' })
+  try {
+    const result = await performCall<T>(method, path, body, headers)
+    notifyApi({ ...base, stage: 'end', ended_ms: performance.now(), result })
+    return result
+  } catch (error) {
+    notifyApi({ ...base, stage: 'end', ended_ms: performance.now(),
+      error_code: error instanceof ApiError ? error.code : 'CLIENT_ERROR' })
+    throw error
+  }
+}
+
+async function performCall<T>(method: string, path: string, body?: unknown, headers: Record<string, string> = {}): Promise<T> {
   const serialized = body !== undefined ? JSON.stringify(body) : undefined
   let res: Response
   try {
