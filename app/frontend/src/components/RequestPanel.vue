@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import { api, requestError, type RequestError, type Intent, type PlanView, type Reference, type RequestView } from '../api'
-import { CONFIRM_FIELD_LABEL, KIND_LABEL, addDays, fromLocalInput, time, toLocalInput } from '../format'
+import { CONFIRM_FIELD_LABEL, KIND_LABEL, addDays, dayLabel, fromLocalInput, time, toLocalInput } from '../format'
 import TimeField from './TimeField.vue'
 
 const props = defineProps<{ reference: Reference; stateRevision: number; existingRequest?: RequestView; queueId?: string; interpretationError?: RequestError & { requestId: string } }>()
@@ -134,12 +134,20 @@ const highlighted = computed(() => {
 
 function jobsFor(opIndex: number) {
   const op = draft.value!.operations[opIndex]
-  const loc = custLoc.value[op.source_customer_id ?? customer.value]
-  return props.reference.jobs.filter((j) => j.kind === op.kind && (j.from_id === loc || j.to_id === loc))
+  const owner = op.kind === 'DELIVERY' ? op.destination_customer_id : op.source_customer_id
+  const loc = custLoc.value[owner ?? customer.value]
+  return props.reference.jobs.filter((j) => j.kind === op.kind && (j.from_id === loc || j.to_id === loc)
+    && (!op.item_id || !j.item_id || j.item_id === op.item_id))
+}
+function selectedJob(opIndex: number) {
+  const op = draft.value!.operations[opIndex]!
+  const job = jobsFor(opIndex).find((j) => j.id === op.target_job_id)
+  if (!op.item_id && job?.item_id) op.item_id = job.item_id
 }
 function jobLabel(j: Reference['jobs'][number]) {
   const site = j.kind === 'DELIVERY' ? j.to_id : j.from_id
-  return `${KIND_LABEL[j.kind]} · ${locName.value[site]} · ${time(j.window_start)} (${j.id})`
+  const item = props.reference.items.find((it) => it.id === j.item_id)?.model_name
+  return `${KIND_LABEL[j.kind]} · ${locName.value[site]} · ${j.window_start ? dayLabel(j.window_start) : '날짜 미정'} ${time(j.window_start)}${item ? ` · ${item}` : ''} (${j.id})`
 }
 function evidenceFor(opIndex: number, field: string) {
   return draft.value!.operations[opIndex].evidence.find((e) => e.path === field)?.quote
@@ -166,11 +174,23 @@ function toggle(path: string) {
   s.has(path) ? s.delete(path) : s.add(path)
   acked.value = s
 }
+function confirmationHelp(path: string) {
+  if (suggestion(path)) return '추천값을 쓰거나 위 칸을 직접 입력해 주세요.'
+  if (['window_end', 'due_at'].includes(fieldOf(path))) {
+    const op = draft.value?.operations[Number(path.split('.')[1])]
+    if (!op?.window_start) return '방문 시작 날짜·시각을 먼저 입력하면 추천값을 사용할 수 있습니다.'
+  }
+  return '위 칸을 직접 입력한 뒤 확인해 주세요.'
+}
 // 확인 항목별 추천값 (사람이 눌러야만 채워짐)
 function suggestion(path: string): { label: string; apply: () => void } | null {
   const [, idx, f] = path.split('.')
   const op = draft.value?.operations[Number(idx)]
   if (!op) return null
+  if (f === 'target_job_id') {
+    const jobs = jobsFor(Number(idx))
+    return jobs.length === 1 ? { label: jobLabel(jobs[0]!), apply: () => { op.target_job_id = jobs[0]!.id; selectedJob(Number(idx)) } } : null
+  }
   if (f === 'window_end' && op.window_start) {
     const item = props.reference.items.find((it) => it.id === op.item_id)
     const mins = item?.service_minutes_by_kind?.[op.kind] ?? 10
@@ -193,7 +213,14 @@ function suggestion(path: string): { label: string; apply: () => void } | null {
       return { label: `방문 종료 기준 (${time(end)})`, apply: () => (op.due_at = toKst(end)) }
     }
     const day = toLocalInput(op.window_start).slice(0, 10)
-    return { label: '당일 17:00', apply: () => (op.due_at = `${day}T17:00:00+09:00`) }
+    const end = op.window_end
+    if (end && existing?.due_at && new Date(existing.due_at) >= new Date(end)) {
+      const due = existing.due_at
+      return { label: `기존 완료 기한 (${time(due)})`, apply: () => (op.due_at = due) }
+    }
+    const close = `${day}T17:00:00+09:00`
+    const due = end && new Date(end) > new Date(close) ? end : close
+    return { label: due === close ? '당일 17:00' : `방문 종료 기준 (${time(due)})`, apply: () => (op.due_at = due) }
   }
   return null
 }
@@ -307,7 +334,7 @@ async function plan() {
           </label>
           <label v-if="op.operation === 'RESCHEDULE'" class="field full">
             <span>변경할 기존 작업</span>
-            <select v-model="op.target_job_id">
+            <select v-model="op.target_job_id" @change="selectedJob(i)">
               <option :value="null">선택</option>
               <option v-for="j in jobsFor(i)" :key="j.id" :value="j.id">{{ jobLabel(j) }}</option>
             </select>
@@ -336,7 +363,7 @@ async function plan() {
           <span>
             <b>{{ CONFIRM_FIELD_LABEL[fieldOf(c.path)] ?? fieldOf(c.path) }}</b>
             {{ c.question }}
-            <small v-if="!filled(c.path)">위 칸을 채우거나 추천값을 쓰세요.</small>
+            <small v-if="!filled(c.path)">{{ confirmationHelp(c.path) }}</small>
           </span>
           <button v-if="suggestion(c.path) && !filled(c.path)" type="button" class="btn small suggest"
                   @click.prevent="applySuggestion(c.path)">{{ suggestion(c.path)!.label }}</button>

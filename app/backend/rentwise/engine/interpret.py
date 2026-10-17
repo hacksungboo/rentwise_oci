@@ -26,7 +26,7 @@ from rentwise.contracts import types as c
 from rentwise.ai_policy import DEFAULT_MODEL, PRICE_VERSION, PRICES, price_version
 from .intent_checks import check_intent, input_context
 
-PROMPT_VERSION = 'rental-extract-v1.1'
+PROMPT_VERSION = 'rental-extract-v1.2'
 INPUT_LIMIT = 16000  # Full UTF-8 request bytes + framing; also the conservative token ceiling.
 INPUT_FRAMING_HEADROOM = 256
 OUTPUT_LIMIT = 2000
@@ -40,7 +40,10 @@ INSTRUCTIONS = """렌탈 요청에서 조건을 추출해 rental.intent.v1 JSON�
 DELIVERY 고객은 destination_customer_id, PICKUP/AS 고객은 source_customer_id,
 TRANSFER는 출발 source_customer_id와 도착 destination_customer_id다.
 요청 출처 source_customer_id는 해당 고객 문맥에 쓸 수 있다. 기존 업무는 종류/고객이
-유일하게 맞을 때만 연결한다. 여러 후보가 맞으면 target_job_id=null 및 AMBIGUOUS 질문.
+날짜·종류·품목·변경 전 시각까지 유일하게 맞을 때만 연결한다. 여러 후보가 남으면
+ target_job_id=null 및 AMBIGUOUS 질문. '오늘 4시 설치를 3시~3시반으로 당겨'에서
+4시는 기존 약속, 변경 방문 범위는 3시~3시30분이다. '반'은30분이다.
+오전·오후를 기존 약속 문맥으로 추론했다면 AMBIGUOUS 확인 질문을 반드시 남긴다.
 received_at을 Asia/Seoul로 바꾼 received_local_date가 오늘 기준이다. 서버 현재 날짜를 쓰지 않는다.
 모든 시각은 +09:00 ISO8601. 내일/모레/요일/날짜는 이 기준으로 계산한다.
 오후 2시로 바꿔달라는 말에서 종료시각/기한/수량을 추측하지 않는다.

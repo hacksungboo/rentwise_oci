@@ -9,8 +9,9 @@ import re
 
 from rentwise.contracts import types as c
 from .intent_checks import _time
+from .request_context import match_change
 
-VERSION = 'b-review-v1'
+VERSION = 'b-review-v2'
 _FORM_FIELDS = {'kind', 'item_id', 'window_start', 'window_end', 'due_at'}
 _LABELS = {
     'rental_end_at': '대여 종료일·무기한 여부', 'source_customer_id': '출발·방문 고객',
@@ -25,6 +26,23 @@ def prepare_review(inp: c.InterpretationInput, result: c.InterpretationResult) -
     prepared = result.model_copy(deep=True)
     intent = prepared.payload
     for index, op in enumerate(intent.operations):
+        context = match_change(inp, op) if len(intent.operations) == 1 else None
+        if context and context['job']['id'] == op.target_job_id:
+            def proposal(field, value, question):
+                setattr(op, field, value)
+                path = f'operations.{index}.{field}'
+                existing = next((q for q in intent.needs_confirmation if q.path == path), None)
+                if existing:
+                    existing.reason, existing.question = 'AMBIGUOUS', question
+                else:
+                    intent.needs_confirmation.append(c.NeedsConfirmation(path=path, reason='AMBIGUOUS', question=question))
+            old = _time(context['old']).strftime('%m월 %d일 %H:%M')
+            proposal('target_job_id', op.target_job_id, f'원문의 기존 {old} 약속과 품목이 일치하는 작업입니다. 변경 대상을 확인해 주세요.')
+            for field, value in (('window_start', context['start']), ('window_end', context['end'])):
+                if getattr(op, field) != value or context['inferred']:
+                    clock = _time(value).strftime('%m월 %d일 %H:%M')
+                    note = '오전·오후가 생략되어 기존 약속의 오전·오후를 유지한 추천입니다.' if context['inferred'] else '원문의 변경 시간 범위를 바탕으로 한 추천입니다.'
+                    proposal(field, value, f'{clock} 추천. {note} 확인하거나 수정해 주세요.')
         job = _selected_job(inp, op)
         item_path = f'operations.{index}.item_id'
         # B already inherits this reference on RESCHEDULE. Showing it earlier
