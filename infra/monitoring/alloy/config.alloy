@@ -54,7 +54,8 @@ prometheus.scrape "containers" {
 
 // ------------------------------------------------------------------ 서비스 응답 (공개 주소 헬스체크)
 prometheus.exporter.blackbox "probe" {
-  config = "{ modules: { http_2xx: { prober: http, timeout: 5s } } }"
+  // OCI 인스턴스는 IPv4 만 있다. 기본값(IPv6 우선)이면 Cloudflare 의 IPv6 주소로 접속하다 실패해 DOWN 으로 보인다.
+  config = "{ modules: { http_2xx: { prober: http, timeout: 5s, http: { preferred_ip_protocol: ip4 } } } }"
 
   target {
     name    = "rentwise"
