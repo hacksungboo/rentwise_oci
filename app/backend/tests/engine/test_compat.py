@@ -16,6 +16,38 @@ def public_snapshot():
     return {k:deepcopy(seed[k]) for k in TABLES}
 
 
+@pytest.mark.parametrize('violation', [None, 'source_window', 'destination_due', 'destination_customer', 'changed_stop'])
+def test_transfer_source_window_does_not_cover_both_customer_stops(violation):
+    snap = public_snapshot()
+    job = next(j for j in snap['jobs'] if j['kind'] == 'TRANSFER')
+    old = next(p for p in snap['plan_items'] if p['job_id'] == job['id'])
+    services = [s for s in old['segments'] if s['kind'] == 'SERVICE']
+    job['window_end'] = services[0]['end_at']
+    rows = deepcopy(snap['plan_items'])
+    expected = None
+    if violation == 'source_window':
+        job['window_end'] = services[0]['start_at']
+        expected = 'VISIT_WINDOW'
+    elif violation == 'destination_due':
+        job['due_at'] = services[1]['start_at']
+        expected = 'DUE_AT'
+    elif violation == 'destination_customer':
+        customer = next(cu for cu in snap['customers'] if cu['location_id'] == job['to_id'])
+        customer['visit_windows'] = [{'start_at': services[0]['start_at'], 'end_at': services[1]['start_at']}]
+        expected = 'CUSTOMER_VISIT_WINDOW'
+    elif violation == 'changed_stop':
+        row = next(p for p in rows if p['job_id'] == job['id'])
+        [s for s in row['segments'] if s['kind'] == 'SERVICE'][1]['start_at'] = services[0]['end_at']
+        expected = 'B_V1_TIME_CHANGE_UNSUPPORTED'
+    before = deepcopy(snap)
+    result = RealEngine().validate(snap, rows)
+    if expected:
+        assert result.status == 'INVALID' and expected in {v.code for v in result.violations}
+    else:
+        assert result.status == 'VALID', result.violations
+    assert snap == before
+
+
 def request(snapshot=None, operations=None, overrides=None, **changes):
     body=dict(request_id='REQ-V1',interpretation_revision=1,base_plan_id='PL-007',base_state_revision=7,
         horizon_start='2026-10-16T00:00:00+09:00',horizon_end='2026-10-23T00:00:00+09:00',
@@ -270,7 +302,7 @@ def test_real_b_delay_request_uses_v2_core_and_confirm_writes_full_candidate(adm
     draft=admin.post('/api/v1/plans',json={'request_id':req['id'],'interpretation_revision':saved.json()['interpretation']['revision'],'base_state_revision':7})
     # B v2 bridge (2026-10-17): delayed pickup goes through A's v2 core, not the v1 compat solver.
     assert draft.status_code==201 and draft.json()['status']=='READY',draft.text
-    assert draft.json()['solver_version']=='rental-solver-normal-delay-v2'
+    assert draft.json()['solver_version']=='rental-solver-normal-delay-v2-1'
     with database.get_db_engine().connect() as conn: assert database.read_snapshot(conn)==before  # draft writes nothing
     done=admin.post(f"/api/v1/plans/{draft.json()['id']}/confirm",json={'expected_plan_revision':1,'base_state_revision':7})
     assert done.status_code==200,done.text

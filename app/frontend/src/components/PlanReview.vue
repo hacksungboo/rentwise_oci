@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import { api, ApiError, type PlanView, type PlanExplanationResult } from '../api'
-import { KIND_LABEL, REASON_LABEL, time } from '../format'
+import { KIND_LABEL, REASON_LABEL, time, dayLabel } from '../format'
 
 const props = defineProps<{ plan: PlanView; cancelLabel?: string }>()
 const emit = defineEmits<{
@@ -49,8 +49,9 @@ async function explain() {
   }
 }
 
-const changed = computed(() => props.plan.diff.filter((d) => d.changed))
-const readyToConfirm = computed(() => props.plan.status === 'READY')
+const hasCandidate = computed(() => props.plan.solver_status === 'FEASIBLE')
+const changed = computed(() => hasCandidate.value ? props.plan.diff.filter((d) => d.changed) : [])
+const readyToConfirm = computed(() => props.plan.status === 'READY' && hasCandidate.value)
 const statusBadge = computed(() => {
   switch (props.plan.status) {
     case 'READY': return { cls: 'ok', text: '실행 가능' }
@@ -98,13 +99,24 @@ async function hold() {
     <header class="row">
       <div>
         <h2>변경안 검토</h2>
-        <p>바뀌는 작업 {{ changed.length }}건 · 확정 전까지 현재 계획은 그대로입니다.</p>
+        <p v-if="hasCandidate">바뀌는 작업 {{ changed.length }}건 · 확정 전까지 현재 계획은 그대로입니다.</p>
+        <p v-else>재배치안을 찾지 못했습니다. 현재 확정 일정은 그대로 유지됩니다.</p>
       </div>
       <span class="badge" :class="statusBadge.cls">{{ statusBadge.text }}</span>
     </header>
 
     <div v-if="plan.is_mock" class="banner info">
       고정 규칙 계산기(AI 엔진 연동 전)로 만든 변경안입니다.
+    </div>
+
+    <div v-for="(f, i) in plan.fallbacks ?? []" :key="'fallback' + i" class="banner info">
+      <strong>{{ f.kind === 'QUICK' ? '퀵 배정 제안 · 호출 필요' : '다음 근무일 회수 제안' }} · {{ f.job_id }}</strong>
+      <p v-if="f.window_start && f.due_at">
+        {{ f.old_window_start ? dayLabel(f.old_window_start) + ' ' + time(f.old_window_start) + ' → ' : '' }}
+        {{ dayLabel(f.window_start) }} {{ time(f.window_start) }}~{{ time(f.window_end) }}
+        · 완료 기한 {{ dayLabel(f.due_at) }} {{ time(f.due_at) }}
+      </p>
+      <p>{{ f.notice }}</p>
     </div>
 
     <section class="explanation" aria-label="변경안 설명" :aria-busy="explaining">
@@ -131,7 +143,7 @@ async function hold() {
       </div>
     </section>
 
-    <ol v-if="plan.result.impact_edges?.length" class="chain">
+    <ol v-if="hasCandidate && plan.result.impact_edges?.length" class="chain">
       <li v-for="(e, i) in plan.result.impact_edges" :key="i">
         <span class="from">{{ label(e.from_job_id) }}</span>
         <span class="why">{{ REASON_LABEL[e.reason] ?? e.reason }}</span>
@@ -147,6 +159,9 @@ async function hold() {
           <span>{{ d.kind === 'PREP' ? '창고' : d.site_name }}</span>
           <small>{{ d.job_id }}</small>
         </div>
+        <p v-if="d.before?.service_start_at && d.after?.service_start_at && dayLabel(d.before.service_start_at) !== dayLabel(d.after.service_start_at)" class="reasons">
+          {{ dayLabel(d.before.service_start_at) }} → {{ dayLabel(d.after.service_start_at) }}
+        </p>
         <div class="cmp num">
           <div class="before">
             <span>{{ d.before?.employee_name ?? (d.kind === 'PREP' ? '창고' : '—') }}</span>
@@ -180,7 +195,7 @@ async function hold() {
       <button class="btn ghost" :disabled="!!busy" @click="emit('cancel')">{{ cancelLabel ?? '다시 입력' }}</button>
       <button class="btn" :disabled="!!busy || plan.status === 'HELD'" @click="hold">보류</button>
       <button class="btn confirm" :disabled="!readyToConfirm || !!busy" @click="confirm">
-        {{ busy === 'confirm' ? '확정 중…' : '이 변경안으로 확정' }}
+        {{ busy === 'confirm' ? '확정 중…' : plan.fallbacks?.length ? '대체 배정·변경 일정 확인하고 확정' : '이 변경안으로 확정' }}
       </button>
     </div>
 

@@ -113,15 +113,17 @@ def create_plan(conn: Connection, request_id: str, interpretation_revision: int,
     pid = f"PL-D{n:02d}-{uuid.uuid4().hex[:4]}"
 
     v2_candidate = None
+    fallbacks, quick_resources = [], {"employees": [], "shifts": []}
     op_dicts = [o.model_dump() for o in ops]
     if engine.mode == "real" and v2_bridge.supports(op_dicts):
-        # 회수 지연: 반납→정비→다음 납품까지 함께 바뀌므로 A v2 core 로 계산하고 완전 후보를 저장
+        # 회수·납품 변경: 대안 정책과 A v2 core로 계산하고 완전 후보를 저장
         try:
             v2snap = _v2_snapshot(snapshot, ws, body)
             v2in = v2_bridge.build_input(v2snap, op_dicts, request_id=request_id, request_revision=1,
                                          interpretation_revision=interpretation_revision, plan_id=pid,
                                          base_plan_id=ws.current_plan_id, overrides=overrides)
-            result, v2_candidate = v2_bridge.to_v1_result(v2snap, v2_bridge.solve(v2in))
+            from rentwise.services import dispatch_fallback
+            result, v2_candidate, v2in, fallbacks, quick_resources = dispatch_fallback.solve(v2in)
             input_hash = v2in["input_hash"]
         except v2_bridge.BridgeUnsupported as exc:
             log.info("v2 경로 미지원, v1 로 계산: %s", exc)
@@ -132,6 +134,9 @@ def create_plan(conn: Connection, request_id: str, interpretation_revision: int,
     status = "READY" if result.status == "FEASIBLE" else "UNRESOLVED"
     meta = result.model_dump(exclude={"candidate_items"})
     meta["inherited_paths"] = inherited
+    meta["fallbacks"] = fallbacks
+    meta["quick_resources"] = quick_resources
+    meta["dispatch_policy_version"] = "dispatch-fallback-v1"
     if v2_candidate is not None:
         meta["v2_candidate"] = v2_candidate
     conn.execute(insert(T.plans).values(
@@ -142,7 +147,7 @@ def create_plan(conn: Connection, request_id: str, interpretation_revision: int,
         result_json=json.dumps(meta, ensure_ascii=False, default=str),
         operations_json=J(op_dicts), created_at=now()))
     rows = []
-    for p in result.candidate_items:
+    for p in (result.candidate_items if result.status == "FEASIBLE" else []):
         d = p.model_dump()
         d["id"], d["plan_id"] = f"PI-{pid}-{p.job_id}", pid
         rows.append(_plan_item_row(d))
@@ -202,10 +207,14 @@ def plan_view(conn: Connection, plan_id: str) -> dict:
         "employee": {r.id: r.name for r in conn.execute(select(T.employees.c.id, T.employees.c.name))},
         "location": {r.id: r.name for r in conn.execute(select(T.locations.c.id, T.locations.c.name))},
     }
+    preview_employees = meta.get("quick_resources", {}).get("employees", [])
+    names["employee"].update({e["id"]: e["name"] for e in preview_employees})
     jobs = {r.id: row_to_dict(T.jobs, r) for r in conn.execute(select(T.jobs))}
     affected = set(meta.get("affected_job_ids", []))
     rows = []
-    for job_id in sorted(set(before) | set(after), key=lambda j: (after.get(j) or before.get(j))["start_at"]):
+    # No feasible candidate means "no proposal", never "delete the base plan".
+    compared_jobs = (set(before) | set(after)) if p.solver_status == "FEASIBLE" and after else set()
+    for job_id in sorted(compared_jobs, key=lambda j: (after.get(j) or before.get(j))["start_at"]):
         b, a = before.get(job_id), after.get(job_id)
         changed = (b is None) or (a is None) or any(
             b[k] != a[k] for k in ("employee_id", "asset_ids")) or parse(b["start_at"]) != parse(a["start_at"]) \
@@ -225,6 +234,8 @@ def plan_view(conn: Connection, plan_id: str) -> dict:
         "result": {k: meta.get(k) for k in ("reservation_changes", "affected_job_ids", "impact_edges", "violations",
                                             "unresolved", "objective", "search_stats", "inherited_paths")},
         "diff": rows,
+        "fallbacks": meta.get("fallbacks", []),
+        "preview_employees": [{"id": e["id"], "name": e["name"]} for e in preview_employees],
         "current_state_revision": ws.state_revision,
         "is_mock": pd.get("engine_mode") == "mock",
     })
@@ -264,7 +275,9 @@ def confirm(conn: Connection, plan_id: str, expected_plan_revision: int, base_st
     meta = json.loads(p.result_json or "{}")
     v2_candidate = meta.get("v2_candidate")
     if v2_candidate is not None:
-        v2snap = _v2_snapshot(snapshot, ws, {"travel_version": p.travel_version, "policy_version": p.policy_version,
+        from rentwise.services import dispatch_fallback
+        augmented = dispatch_fallback.add_resources(snapshot, meta.get("quick_resources", {}))
+        v2snap = _v2_snapshot(augmented, ws, {"travel_version": p.travel_version, "policy_version": p.policy_version,
                                              **_horizon()})
         vr = v2_bridge.validate(v2snap, v2_candidate)
     else:
@@ -276,6 +289,7 @@ def confirm(conn: Connection, plan_id: str, expected_plan_revision: int, base_st
 
     ts = now()
     if v2_candidate is not None:
+        dispatch_fallback.persist_resources(conn, meta.get("quick_resources", {}))
         _apply_v2(conn, snapshot, v2snap, v2_candidate, meta)
         return _finish_confirm(conn, ws, p, plan_id, actor, trace_id, ts)
     # 1) 예약 교체

@@ -173,3 +173,29 @@ Owned: api/routes, services/request_queue·requests·plans, db/tables·database,
 TEL-062 Review: 화면/API/DB영속FIFO 완료. backend415 PASS(391+신규24, FakeClient+busy운영seed), frontend typecheck/build39 PASS, 로컬IAB 3건확정 r7→10/두번째초안복원/재계산·보류 전환 PASS, OracleDDL/잠금컴파일 PASS(실기동 아님). root69/bootstrap은 별도. queue확정롤백/동시confirm1회·후행차단·해석lease/noDB모델대기·schema2/v1backup 회귀 포함. busy-v1 AS는 기존J-TRF1 VISIT_WINDOW로미해결임을 숨기지 않고 회수확정1/AS보류2로 검사. 실제유료모델/운영Oracle·다중서버/모바일/배포 SKIPPED. 상세 docs/REQUEST_QUEUE.md 및 A인계. no commit/push/PR.
 
 TEL-062 제출 승인(2026-10-17): 사용자가 commit/push/PR 요청. origin/main58b7eb5가 여전히 최신임을 fetch로 확인했다. 제출 전 동일 코드 backend415 PASS(15.83s/FakeClient+busy운영seed), frontend configured typecheck/build39 PASS, root69/bootstrap PASS 재검증. 대기열18파일만 feat/b-request-queue로 제출한다. 실제유료모델/Oracle·배포는 SKIPPED, B 소유 경로 리뷰 및 busy AS 기존제약은 PR에 명시. 앞선 미커밋/no-push 기록은 당시 상태다.
+
+## TEL-063 — busy-v1 미해결 계획의 전체 삭제 미리보기 (In Progress)
+
+Owner Codex(A/B), fix/b-unresolved-plan-preview, maina4081bb 기준. 사용자 보고: 재계산 후 '조건을 모두 지키는 계획을 찾지 못함', 변경169건/모든일정점선. 범위: A v1 validator의TRANSFER방문창/B plan_view/Vue App·PlanReview 및 회귀·A인계. C seed/gold·실제운영DB·모델·대기열계약/DBschema는불변.
+계획: 운영busy seed+사람확인된개발요청으로유료호출없이재현 → candidate0과169개삭제diff·UI반영/원본DB불변 확인 → 기존 R3 출발·도착창 계약과B v2 bridge비교로TRANSFER오판확인 → v1도동일한기존도착창/기한으로검사(하드제약유지) → 미해결/빈후보의diff미생성 및UI현재계획유지 → 실제불가능요청/정상3건·API회귀/프런트검증·브라우저. 범위를벗어나는원인은재현근거로별도기록. no paid/commit/push/deploy.
+수용: 실패가전체일정삭제로보이지않고확정불가/오류는표시; 기존고객방문창/출발창/도착기한/양쪽SERVICE검사유지; busy의기존TRANSFER는미변경시검사통과·허용AS조정후선행보존; 초안·실패운영무변경.
+
+TEL-063 로컬 교정: 원본재현 INVALID(J-TRF1)/UNRESOLVED/169삭제diff/DB169불변 → v1TRANSFER도착창을기존Bbridge규칙으로교정하고비FEASIBLE후보diff/부분저장을차단. UI는READY+FEASIBLE+현재revision일때만미리보기, 실패시현재일정유지. 동일busyAS요청 READY/1변경/삭제0/DB169불변. backend427 PASS(기존415+12), typecheck/build39 PASS, IAB불가능AS요청실패안내+현재카드유지/확정비활성 확인. 기존busy대기열3건도r7→10확정/기존TRANSFER보존. 아직미커밋. 사용자후속배송/회수정책을같은checkout 새feat/b-dispatch-fallback에서이어간다.
+
+## TEL-064 — 배송 퀵 배정·회수 다음 근무일 제안 (In Progress)
+
+Owner Codex A/B · feat/b-dispatch-fallback · maina4081bb + 미커밋TEL063보존.
+사용자결정: 실제업체API/과금없이퀵배정변경안→책임자확정. 회수는다음근무일고객방문가능시간첫날제안. 범위: 기존DELIVERY재배치 v2연결, 내부직원우선/배송전용전담퀵자원·미호출표시/예약·준비검사, 당일PICKUP인력부족→고객창/근무일조회후회수·PREP·후속납품함께검증, 최신계획확정/DB영속·미확정운영무변경·UI외부배정/변경날짜·기한명시.
+경계: 실퀵호출/외부과금/AI추가모델/실시간현장완료/C데이터/공용schema변경없음. 가용직원이있는정상안우선, 데이터누락·미지원·장비부족/방문불가를직원부족으로숨기지않음. 퀵은작업별예약ID/자원으로다른작업·회수·AS에재사용차단. 확정후에도실제호출은별도이며미호출표시유지. 미래회수·기한변경은제안/책임자확정전저장않음.
+검증: 내부직원가능시퀵0, 불가배송퀵READY→확정/재조회, 장비/준비부족시계속미해결, 회수오늘불가→익일/휴무·고객휴일건너뜀/지평초과보류, 회수·PREP·후속납품/예약보존, 확정stale/rollback/큐연결·퀵타작업재사용금지, FakeClient/무료API/프런트/브라우저. 모델실호출/Oracle/배포/commit/push별도.
+
+TEL-063/064 결과 — Review(구현·로컬 검증 완료), feat/b-dispatch-fallback.
+A v1 TRANSFER창/미해결diff 교정12회귀 + 퀵/다음근무일29회귀, 기존B API/큐/DB원자저장/Vue까지연결. 운영schema/공용contracts/Cseed·gold/infra/모델예산무변경. 배송전담QK는실제호출별도표시·확정시만영속, 회수는직원/고객창/준비/후속납품조건유지. 상세 docs/DISPATCH_FALLBACK.md 및 A인계.
+PASS 최종 backend `RENTWISE_BUSY_SEED=/absolute/path/to/seed_busy.json python -m pytest -q` **456개**(기존415+TEL06312+TEL06429),23.61s/외부anyio경고1. frontend configured vue-tsc --noEmit/vite build39modules PASS(번들Node/기존deps), root sh scripts/check.sh bootstrap/기존A69 PASS(별도repo). IAB+FakeClient/격리busy사본: 내부근무17:30종료→배송17:30퀵제안·확정r8→회수17:30다음등록근무일10/17 09:20·준비09:50→동일퀵납품17:30/P02대체유지→확정r9·DB169보존/날짜조회 PASS. 새API회귀는주말고객휴무→월요일·범위없음/장비불가·수동지정·예약과거보호·stale/rollback·큐최신계획도포함한다.
+SKIPPED 실제유료모델/실제퀵업체·요금/Oracle실기동·다중서버/모바일viewport/운영배포. 실제repo scripts/check.sh 및backend별도lint/type/build NOT CONFIGURED. Fake배송응답의잘못된한국어근거인용은AI_SCHEMA_INVALID로정상차단되어수동기존작업입력경로로이어졌고회수는FakeAI해석→사람확인했다. 이는실모델품질결과가아니다. 임시서버/QA탭/의존성링크정리, 미커밋/no push/PR. B소유services/frontend변경리뷰와사용자Git제출지시대기.
+
+TEL-063/064 커밋 승인(2026-10-17): 사용자가 로컬 커밋을 요청했다. feat/b-dispatch-fallback에서 TEL063 검토 오류 수정과 TEL064 인력 부족 대안을 두 커밋으로 분리한다. 원본 작업 파일은 보존하고 index에 TEL063만 구성한 격리 사본을 검증한다. 최종 통합456/프런트typecheck·build/브라우저/rootcheck PASS 증거는 유지한다. 코드 추가 변경 없이 Git 제출 단위를 나누며 push/PR/배포는 수행하지 않는다. B 소유 services/frontend 리뷰와 실제 Oracle·업체 인수는 후속이다.
+
+분리 검증 PASS: TEL063 staged 사본에서 backend427(16.76s, busy/FakeClient)/frontend typecheck·build39 통과 후 `0aa4505 fix(web): 미해결 변경안에서 현재 일정 유지` 생성. 원본 checkout의 TEL064 구현 파일은 그대로 보존했으며 앞선 통합456/프런트·IAB 검증본과 같다. 나머지 기능·문서는 별도 feat 커밋으로 저장한다. 실제 유료 호출·원격 push/PR/배포 없음.
+
+TEL-063/064 PR 제출 승인(2026-10-17): 사용자 'pr 해줘'에 따라 로컬 두 커밋(0aa4505/c200e1d)을 origin/main 대상으로 제출한다. fetch 결과 maina4081bb가 그대로 최신이고 rebase 결과 up to date/충돌 없음. 코드 불변이므로 앞선 통합456·프런트typecheck/build·IAB 및 분리427 검증을 재사용하며 추가 유료 호출은 하지 않는다. B 소유 services/Vue 연결 리뷰·실제 업체 호출 별도·7일지평/최대14단계·Oracle 미인수를 PR 본문에 명시한다. 푸시/PR 생성만 수행하며 main 병합·운영배포는 수행하지 않는다.

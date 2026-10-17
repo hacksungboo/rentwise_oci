@@ -139,6 +139,9 @@ export interface PlanView {
   id: string; revision: number; status: string; solver_status: string; engine_mode: string; is_mock: boolean
   base_plan_id: string; base_state_revision: number; current_state_revision: number; input_hash: string
   diff: DiffRow[]
+  preview_employees?: { id: string; name: string }[]
+  fallbacks?: { kind: 'QUICK' | 'PICKUP_NEXT_WORKDAY'; job_id: string; notice: string; status?: string
+    old_window_start?: string; old_due_at?: string; window_start?: string; window_end?: string; due_at?: string }[]
   result: {
     impact_edges: { from_job_id: string; to_job_id: string; reason: string; old_time: string | null; new_time: string | null }[]
     violations: { code: string; job_ids: string[] }[]; unresolved: { job_id: string | null; code: string; details: Record<string, unknown> }[]

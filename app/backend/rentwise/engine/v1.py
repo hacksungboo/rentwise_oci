@@ -16,9 +16,9 @@ from pydantic import ValidationError
 from rentwise.contracts import types as c
 from rentwise.contracts.v2.schema import ContractError, timestamp
 
-from . import execution
+from . import execution, quick
 
-VERSION = 'rental-solver-b-v1-3'
+VERSION = 'rental-solver-b-v1-4'
 TABLES = ('locations', 'customers', 'items', 'assets', 'rentals', 'reservations',
           'employees', 'shifts', 'jobs', 'plan_items', 'dependencies', 'travel_times')
 FROZEN = {'IN_PROGRESS', 'COMPLETED', 'FAILED'}
@@ -167,6 +167,8 @@ def validate(snapshot, candidate, *, new_jobs=(), movable_jobs=(), replaceable_j
                     fail('PREP_WINDOW',jid)
                 continue
             eid=p['employee_id']
+            if not quick.allowed(eid,kind,jid):
+                fail('QUICK_RESOURCE_SCOPE',jid,eid)
             if eid not in ix['employees']:
                 fail('EMPLOYEE_REQUIRED',jid); continue
             emp=ix['employees'][eid]
@@ -179,11 +181,20 @@ def validate(snapshot, candidate, *, new_jobs=(), movable_jobs=(), replaceable_j
             if kind=='TRANSFER' and not item['direct_transfer_allowed']: fail('DIRECT_TRANSFER_DISABLED',jid)
             if (kind=='DELIVERY' and j['from_id']!=warehouse or kind=='PICKUP' and j['to_id']!=warehouse
                     or kind=='AS' and j['from_id']!=j['to_id']): fail('JOB_ROUTE',jid)
-            for s,loc in zip(sv,locations):
+            for stop,(s,loc) in enumerate(zip(sv,locations)):
                 a,b=span(s)
                 if s['from_id']!=loc or (b-a).total_seconds()<60*item['service_minutes_by_kind'][kind]:
                     fail('SERVICE_DURATION_OR_LOCATION',jid)
-                if not timestamp(j['window_start'])<=a<b<=timestamp(j['window_end']): fail('VISIT_WINDOW',jid)
+                low,high=j['window_start'],j['window_end']
+                if kind=='TRANSFER' and stop==1:
+                    # B v1 stores the source window only. Match the existing v2
+                    # bridge: preserve the recorded destination visit through due_at.
+                    # Non-AS time/segment changes remain forbidden above.
+                    baseline=[x for x in old.get(jid,{}).get('segments',[]) if x['kind']=='SERVICE']
+                    if len(baseline)!=2:
+                        raise ContractError(['snapshot.plan_items.TRANSFER.destination_window'])
+                    low,high=baseline[1]['start_at'],j['due_at']
+                if not timestamp(low)<=a<b<=timestamp(high): fail('VISIT_WINDOW',jid)
                 customer=customer_at.get(loc)
                 if customer is None or not any(span(w)[0]<=a and b<=span(w)[1] for w in customer['visit_windows']):
                     fail('CUSTOMER_VISIT_WINDOW',jid)
@@ -413,6 +424,7 @@ def solve(inp, as_of):
                         starts.append(cursor); cursor+=timedelta(minutes=5)
             employees=sorted(ix['employees'].values(),key=lambda e:(e['id']!=p['employee_id'],e['id']))
             for emp in employees:
+                if quick.is_quick(emp['id']) and o.get('employee_id')!=emp['id']: continue
                 if 'employee_id' in o and emp['id']!=o['employee_id']: continue
                 for start in starts:
                     if examined>=inp.max_candidates or (monotonic()-started)*1000>=inp.max_search_ms:

@@ -81,6 +81,7 @@ def validate(snapshot: JSONRecord, complete_candidate_plan: CandidatePlan) -> Va
         if rid not in base["rentals"] and (new["status"] != "PLANNED" or new["actual_start"] is not None or new["actual_end"] is not None):
             fail("RENTAL_ACTUAL_CHANGED")
 
+    from . import quick
     services = {}
     warehouse = next(loc["id"] for loc in snapshot["locations"] if loc["kind"] == "WAREHOUSE")
     customers_at = {c["location_id"]: c for c in snapshot["customers"]}
@@ -104,6 +105,8 @@ def validate(snapshot: JSONRecord, complete_candidate_plan: CandidatePlan) -> Va
             fail("INCOMPLETE_PLAN", jobs=[jid], expected=1, actual=len(ps))
             continue
         p = ps[0]
+        if not quick.allowed(p["employee_id"], kind, jid):
+            fail("QUICK_RESOURCE_SCOPE", jobs=[jid])
         if len(set(p["asset_ids"])) != j["quantity"] or sorted(p["asset_ids"]) != sorted(j["asset_ids"]):
             fail("ASSET_QUANTITY", jobs=[jid], assets=p["asset_ids"])
         if any(ix["assets"][a]["item_id"] != j["item_id"] for a in p["asset_ids"]):
@@ -224,6 +227,27 @@ def validate(snapshot: JSONRecord, complete_candidate_plan: CandidatePlan) -> Va
 
 
 def _check_reservations(snapshot, candidate, ix, plans, services, fail):
+    def approved_planned_delivery_move(old, replacements):
+        rental = next(r for r in snapshot['rentals'] if r['id'] == old['rental_id'])
+        if (rental['status'] != 'PLANNED' or rental['actual_start'] is not None or rental['actual_end'] is not None
+                or timestamp(old['start_at']) < max(timestamp(snapshot['as_of']), timestamp(snapshot['horizon_start']))):
+            return False
+        for old_job in snapshot['jobs']:
+            jid = old_job['id']
+            old_plan = next((p for p in snapshot['plan_items'] if p['job_id'] == jid), None)
+            new_job, new_plan = ix['jobs'].get(jid), plans.get(jid)
+            if (jid not in candidate['approved_job_ids'] or old_job['kind'] != 'DELIVERY'
+                    or old_job['status'] in FROZEN | {'CANCELLED'} or not old_plan or not new_job or not new_plan
+                    or old['asset_id'] not in old_job['asset_ids']
+                    or timestamp(old_plan['start_at']) != timestamp(old['start_at'])
+                    or any(old_job[k] != new_job[k] for k in ('kind', 'from_id', 'to_id', 'item_id', 'quantity'))
+                    or ix['customers'][rental['customer_id']]['location_id'] != old_job['to_id']):
+                continue
+            if any(timestamp(r['start_at']) == timestamp(new_plan['start_at'])
+                   and r['asset_id'] in new_job['asset_ids'] for r in replacements):
+                return True
+        return False
+
     grouped = defaultdict(list)
     for r in candidate["reservations"]:
         if r["status"] != "ACTIVE":
@@ -258,7 +282,8 @@ def _check_reservations(snapshot, candidate, ix, plans, services, fail):
         replacements = [r for r in candidate["reservations"] if r["rental_id"] == old["rental_id"]]
         if not replacements:
             fail("EXISTING_RESERVATION_MISSING", assets=[old["asset_id"]])
-        elif not any(timestamp(r["start_at"]) <= timestamp(old["start_at"]) for r in replacements):
+        elif (not any(timestamp(r["start_at"]) <= timestamp(old["start_at"]) for r in replacements)
+              and not approved_planned_delivery_move(old, replacements)):
             fail("RESERVATION_START_TRUNCATED", assets=[old["asset_id"]])
         if not overlaps(interval(old["start_at"], old["end_at"]), interval(snapshot["horizon_start"], snapshot["horizon_end"])):
             keys = ("asset_id", "rental_id", "start_at", "end_at", "release_job_id", "review_required")

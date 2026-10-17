@@ -1,10 +1,10 @@
-"""B 저장 구조 ↔ A v2 core(solve/validate) 연결 (real 모드의 회수 지연 경로).
+"""B 저장 구조 ↔ A v2 core(solve/validate) 연결 (real 모드 회수·납품 변경).
 
 A 의 RealEngine(v1 호환)은 B v1 저장 범위(직원 변경·AS 창 안 시각)만 자동 후보로 낸다.
 회수 지연은 반납 → 정비 → 다음 납품(같은 모델 대체)까지 작업 창·예약·대여·의존을 함께 바꾸므로
 A 의 v2 core 를 직접 호출하고, B 가 그 완전 후보(candidate plan)를 그대로 저장한다.
 
-- 엔진 코드는 바꾸지 않는다. 형식 변환·ID 발급·저장만 B 가 맡는다.
+- 형식 변환·ID 발급·저장과 대안 정책 연결은 B services, 순수 탐색·제약 검사는 A engine이 맡는다.
 - v2 가 다루지 않는 B 값(예: 대여 없이 잡힌 납품 예약)은 변환 중 임시 대여로 감싸고 저장 때 되돌린다.
 """
 from __future__ import annotations
@@ -24,8 +24,8 @@ class BridgeUnsupported(Exception):
 
 
 def supports(ops: list[dict]) -> bool:
-    """v2 core 가 처리하는 요청: 기존 회수(PICKUP) 일정 변경."""
-    return bool(ops) and all(o.get("operation") == "RESCHEDULE" and o.get("kind") == "PICKUP" for o in ops)
+    """v2 core 가 처리하는 요청: 기존 회수·납품 일정 변경."""
+    return bool(ops) and all(o.get("operation") == "RESCHEDULE" and o.get("kind") in ("PICKUP", "DELIVERY") for o in ops)
 
 
 # --------------------------------------------------------------------------- 변환
@@ -106,17 +106,26 @@ def build_input(v2snap: dict, ops: list[dict], *, request_id: str, request_revis
     normalized = []
     for o in ops:
         job = jobs.get(o.get("target_job_id") or "")
-        if job is None or job["kind"] != "PICKUP":
-            raise BridgeUnsupported("TARGET_NOT_PICKUP")
-        rental = next((r for r in v2snap["rentals"] if r["status"] == "ACTIVE" and r["asset_id"] in job["asset_ids"]
-                       and customers[r["customer_id"]]["location_id"] == job["from_id"]), None)
+        if job is None or job["kind"] not in ("PICKUP", "DELIVERY"):
+            raise BridgeUnsupported("TARGET_NOT_PICKUP_OR_DELIVERY")
+        location = job["from_id"] if job["kind"] == "PICKUP" else job["to_id"]
+        rental_status = "ACTIVE" if job["kind"] == "PICKUP" else "PLANNED"
+        rental = next((r for r in v2snap["rentals"] if r["status"] == rental_status and r["asset_id"] in job["asset_ids"]
+                       and customers[r["customer_id"]]["location_id"] == location), None)
+        if job["kind"] == "DELIVERY":
+            plan = next((p for p in v2snap["plan_items"] if p["job_id"] == job["id"]), None)
+            bindings = [r for r in v2snap["reservations"] if plan and r["status"] == "ACTIVE"
+                        and r["asset_id"] in job["asset_ids"] and r["start_at"] == plan["start_at"]]
+            rental = next((r for r in v2snap["rentals"] if len(bindings) == 1 and r["id"] == bindings[0]["rental_id"]
+                           and r["status"] == "PLANNED" and customers[r["customer_id"]]["location_id"] == location), None)
         if rental is None:
-            raise BridgeUnsupported("PICKUP_RENTAL_NOT_FOUND")
+            raise BridgeUnsupported("RENTAL_BINDING_NOT_FOUND")
         try:
             normalized.append(normalize_operation(
                 v2snap, "RESCHEDULE", job["id"],
                 {"window_start": o["window_start"], "window_end": o["window_end"], "due_at": o["due_at"]},
-                confirmed=True, rental_id=rental["id"], return_policy="NOT_APPLICABLE"))
+                confirmed=True, rental_id=rental["id"], return_policy=("NOT_APPLICABLE" if job["kind"] == "PICKUP"
+                    else "OPEN_ENDED" if job["rental_end_at"] is None else "FIXED")))
         except ContractError as exc:
             raise BridgeUnsupported("NORMALIZE:" + ",".join(exc.paths)) from None
 

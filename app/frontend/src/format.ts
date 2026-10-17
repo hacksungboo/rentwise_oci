@@ -32,6 +32,9 @@ export const REASON_LABEL: Record<string, string> = {
   SUBSTITUTE_SHORTAGE: '대체할 장비 부족',
   MOCK_ENGINE_UNSUPPORTED: '현재 계산 엔진이 지원하지 않는 요청',
   EMPLOYEE_OVERLAP: '직원 일정 겹침',
+  QUICK_SERVICE_REQUIRED: '내부 배송 인력 부족으로 퀵 배정 · 실제 호출 필요',
+  PICKUP_NEXT_WORKDAY: '고객 방문 가능한 다음 근무일로 회수 제안',
+  QUICK_RESOURCE_SCOPE: '이 퀵 자원은 지정된 배송 업무에만 배정할 수 있음',
 }
 
 export const CONFIRM_FIELD_LABEL: Record<string, string> = {

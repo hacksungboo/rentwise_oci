@@ -16,6 +16,8 @@ const ops = ref<Ops | null>(null)
 const reference = ref<Reference | null>(null)
 const version = ref<VersionInfo | null>(null)
 const plan = ref<PlanView | null>(null)
+const previewing = computed(() => !!plan.value && plan.value.status === 'READY'
+  && plan.value.solver_status === 'FEASIBLE' && plan.value.base_state_revision === ops.value?.workspace.state_revision)
 const date = ref<string | undefined>(undefined)
 const loadError = ref('')
 const toast = ref('')
@@ -112,7 +114,10 @@ const board = computed(() => {
   const ghosts: Ghost[] = []
   const changed = new Set<string>()
   const hot = new Set<string>()
-  if (plan.value) {
+  if (plan.value && previewing.value) {
+    for (const e of plan.value.preview_employees ?? []) {
+      if (!lanes.some((l) => l.id === e.id)) lanes.push({ ...e, shift: null, breaks: [], items: [] })
+    }
     for (const d of plan.value.diff) {
       if (!d.changed) continue
       const strip = (c: Card) => c.job_id !== d.job_id
@@ -181,8 +186,9 @@ const isAdmin = computed(() => user.value?.role === 'ADMIN')
     <main v-if="ops && reference && board" class="layout">
       <section class="left">
         <div class="board-head">
-          <h2>{{ plan ? '변경안 미리보기' : '오늘의 배차' }}</h2>
-          <p v-if="plan">노란 테두리가 바뀌는 작업, 점선은 원래 위치입니다.</p>
+          <h2>{{ previewing ? '변경안 미리보기' : '오늘의 배차' }}</h2>
+          <p v-if="previewing">노란 테두리가 바뀌는 작업, 점선은 원래 위치입니다.</p>
+          <p v-else-if="plan">적용할 변경안이 없어 현재 확정 일정을 표시합니다.</p>
           <p v-else>직원별 이동·현장 작업과 창고 준비 시간입니다.</p>
         </div>
         <TimelineBoard :lanes="board.lanes" :prep="board.prep" :ghosts="board.ghosts" :changed="board.changed" />

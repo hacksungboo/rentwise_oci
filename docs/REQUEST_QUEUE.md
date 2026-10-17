@@ -48,6 +48,6 @@ DB schema_version=2: `rw_request_queues`, `rw_request_queue_items` 두 표만 �
 ## 검증·시연 조건과 알려진 한계
 
 - B 개발 seed: FakeClient+실제 A/B API/SQLite로 회수14시 → 기존 AS1 10:15 → 다음날 AS2 14:15 순서로 사람이 검토·확정. r7→8→9→10, 다음 base_plan_id 연쇄, 앞 회수/준비/납품대체 및 AS 배정·시각·segment 보존, 초안 무저장·실제 Asset 불변을 검사한다. 이는 개발용 예시이며 C 평가 정답/일반 성공률이 아니다.
-- busy-v1 운영 seed의 별도 회귀: 회수 확정 r8은 유지되지만 이후 AS 요청은 기존 v1 validator가 `J-TRF1`에 VISIT_WINDOW를 반환하여 UNRESOLVED다. 현재 대기열은 잘못 확정하지 않고 명시 보류 후 다음 요청을 검토한다. 해당 예시 결과는 **확정1/보류2**이며 3건 확정 성공으로 표시하지 않는다. 이 기본 일정/validator 의미 문제는 별도 A·B·C 확인 대상이고 이번 대기열에서 seed나 solver를 조정하지 않았다.
+- busy-v1의 기존 `J-TRF1 VISIT_WINDOW` 오판은 TEL-063에서 출발/도착 창을 분리하는 기존 B bridge 계약에 맞춰 교정했다. 동일 무료 회귀는 **3건 확정 r7→10**과 앞선 변경·TRANSFER 시각 보존을 검사한다. 실제 불가능한 요청은 계속 미해결/확정 차단되며 전체 일정을 삭제하는 미리보기를 만들지 않는다. 과거 확정1/보류2 기록은 교정 전 결과다. [원인과 수정](DISPATCH_FALLBACK.md#busy-v1에서-전체-일정이-사라져-보인-원인-tel-063).
 - 인수 대상 추가 시험: 후행 모든 쓰기 차단, 동시 접수 멱등/확정1회, lease 중복·만료, 실패/수동대체, 보류/새 묶음, 외부확정 후 stale/사람조건 변경 후 옛 초안 차단, 확정 저장 실패 롤백, reset/backup/schema1 업그레이드, 권한.
 - 실제 OpenAI/Oracle/클라우드/모바일/다중 서버 인수는 별도다. FakeClient 시연을 실제 LLM 의미 품질로 확대하지 않는다. 기존 T17 수동 비교 기록은 이 새 기능으로 대체하지 않는다.
