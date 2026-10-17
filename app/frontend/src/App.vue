@@ -115,6 +115,9 @@ const board = computed(() => {
   const changed = new Set<string>()
   const hot = new Set<string>()
   if (plan.value && previewing.value) {
+    for (const e of plan.value.preview_employees ?? []) {
+      if (!lanes.some((l) => l.id === e.id)) lanes.push({ ...e, shift: null, breaks: [], items: [] })
+    }
     for (const d of plan.value.diff) {
       if (!d.changed) continue
       const strip = (c: Card) => c.job_id !== d.job_id

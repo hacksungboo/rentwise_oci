@@ -2,7 +2,7 @@
 
 ```
 고객 원문 ─▶ GPT(A 해석, Structured Outputs) ─▶ 원문 근거·ID·날짜 검증 ─▶ 사람 확인
-        ─▶ 회수 지연: A v2 core (반납→정비→다음 납품, 같은 모델 대체)  /  그 외: A v1 호환 엔진
+        ─▶ 회수·납품 변경: A v2 core (반납→정비→다음 납품, 같은 모델 대체/인력 부족 대안)  /  그 외: A v1 호환 엔진
         ─▶ 완전 후보 재검증 ─▶ 확정 트랜잭션(Oracle) ─▶ 재조회
 ```
 
@@ -76,6 +76,7 @@ SELECT status, COUNT(*), SUM(NVL(settled_usd, reserved_usd)) FROM rw_ai_ledger G
 | 요청 | real 결과 |
 |---|---|
 | 회수 지연 (기존 PICKUP 일정 변경) | A v2 core: 회수 직원 재배정, 준비 이동, 다음 납품 같은 모델 대체, 예약·대여·의존 갱신 |
+| 기존 납품 일정 변경 | A v2 core: 내부 인력 우선, 부족 시 책임자 확인용 퀵 배정안 |
 | 기존 A/S 방문창 안 시각 변경, 직원 변경 | A v1 호환 엔진 |
 | 신규 납품·이동·장비 지정 변경 등 | 검토 필요(NEEDS_REVIEW)로 확정 차단 |
 
@@ -108,3 +109,11 @@ B 후속 검토: 후보를 보낸 거래처 + 원문 이름/약칭의 결정적 
 API: 관리자 `POST /api/v1/plans/{plan_id}/explanation`, body `{expected_plan_revision, base_state_revision, input_hash}`. 응답 `{status: OK|FALLBACK, explanation, call, error_code}`. 설명 본문은 Vue 보간으로 표시하며 HTML을 실행하지 않습니다. [A 구현 기록](handoffs/A.md#tel-057--변경안-ai-설명-화면api).
 
 검증은 FakeClient/격리 SQLite/실제 BudgetPort와 로컬 브라우저로 수행했습니다. 실제 유료 모델 호출·운영 Oracle·배포는 별도입니다.
+
+## 9. 내부 인력 부족 대안 (TEL-064)
+
+기존 DELIVERY 변경도 v2 core로 계산한다. 내부 직원 계획부터 찾고, 별도 인력 검사에서 부족이 확인될 때만 퀵 배정 변경안/당일 회수의 다음 근무일 제안을 만든다. 실제 업체 호출·수락·결제는 별도이고 책임자 확정 전 운영 자원을 바꾸지 않는다. 장비·준비·방문창·기한은 완화하지 않는다. 단일 요청/대기열의 기존 계산·확정 API에 연결했으며 새 환경변수/모델 호출/비용 정책은 없다.
+
+버전: v2 `rental-solver-normal-delay-v2-1`, v1 `rental-solver-b-v1-4`, 내부 정책 `dispatch-fallback-v1`. `PROMPT_VERSION=rental-extract-v1.1`/설명 `rental-plan-explain-v1.0`, PRICE/입력16000/예약 $0.0064는 그대로다. 여러 날짜의 대안 탐색은 총 2초 보장이 아니며 단계별 제한·자원 표현·확정 계약은 [DISPATCH_FALLBACK.md](DISPATCH_FALLBACK.md)를 따른다.
+
+TEL-063은 busy-v1의 TRANSFER 방문창 오판과 실패 시 전체 삭제처럼 보이던 미리보기를 수정한다. 불가능한 요청은 오류와 현재 일정으로 남으며 확정할 수 없다. seed/gold는 수정하지 않았다.

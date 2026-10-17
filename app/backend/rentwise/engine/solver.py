@@ -16,10 +16,10 @@ from rentwise.contracts.v2.serialization import solver_input_hash
 from rentwise.contracts.v2.types import SolverInput, SolverResult
 
 from . import execution
-from .common import FROZEN, check_references, interval, overlaps, route_fits
+from .common import FROZEN, check_references
 from .validate import validate
 
-SOLVER_VERSION = "rental-solver-normal-delay-v2"
+SOLVER_VERSION = "rental-solver-normal-delay-v2-1"
 ASSET_EDGES = {"READY_DELIVERY", "PREPARATION_DEPENDENCY", "ASSET_READY"}
 INTERNAL_TABLES = ("jobs", "plan_items", "rentals", "reservations", "dependencies")
 EMPLOYEE_CODES = {"EMPLOYEE_BREAK", "EMPLOYEE_OVERLAP", "EMPLOYEE_TRAVEL_GAP", "SHIFT_RETURN", "OUTSIDE_SHIFT", "EMPLOYEE_SKILL"}
@@ -104,7 +104,7 @@ class _Search:
             jid = op["job"]["id"]
             if jid in self.operations:
                 raise ContractError(["input.operations.duplicate_job"])
-            if (op["operation"], op["job"]["kind"]) not in (("CREATE", "DELIVERY"), ("RESCHEDULE", "PICKUP")):
+            if (op["operation"], op["job"]["kind"]) not in (("CREATE", "DELIVERY"), ("RESCHEDULE", "PICKUP"), ("RESCHEDULE", "DELIVERY")):
                 raise _Review("UNSUPPORTED_OPERATION", jid)
             if op["job"]["quantity"] != 1:
                 raise _Review("MULTI_ASSET_NOT_SUPPORTED", jid)
@@ -234,8 +234,12 @@ class _Search:
                 rid = op["rental_id"]
                 rental = self.ix["rentals"].get(rid)
                 j = self.jobs[jid]
-                if rental is None or rental["status"] != "ACTIVE" or rental["asset_id"] not in j["asset_ids"] or self.ix["customers"][rental["customer_id"]]["location_id"] != j["from_id"]:
+                expected_status = "PLANNED" if j["kind"] == "DELIVERY" else "ACTIVE"
+                location = j["to_id"] if j["kind"] == "DELIVERY" else j["from_id"]
+                if rental is None or rental["status"] != expected_status or rental["asset_id"] not in j["asset_ids"] or self.ix["customers"][rental["customer_id"]]["location_id"] != location:
                     raise ContractError(["operations.rental_id"])
+                if j["kind"] == "DELIVERY":
+                    continue
                 prep = [d["successor_job_id"] for d in self.candidate["dependencies"] if d["predecessor_job_id"] == jid and self.jobs[d["successor_job_id"]]["kind"] == "PREP"]
                 if len(prep) != 1:
                     raise ContractError(["snapshot.pickup.preparation_dependency"])
@@ -345,10 +349,16 @@ class _Search:
         return [[a] for a in sorted(eligible, key=lambda a: (a not in j["asset_ids"], a))]
 
     def employees(self, j):
+        from . import quick
         location = j["to_id"] if j["kind"] == "DELIVERY" else j["from_id"]
         preferred = self.customers.get(location, {}).get("preferred_employee_id")
         category = self.ix["items"][j["item_id"]]["category"]
-        return sorted((e for e in self.snapshot["employees"] if e["active"] and {"task_kind": j["kind"], "item_category": category} in e["skills"]), key=lambda e: (e["id"] != preferred, e["id"]))
+        forced = self.overrides.get(j["id"], {}).get("employee_id")
+        return sorted((e for e in self.snapshot["employees"] if e["active"]
+                       and quick.allowed(e["id"], j["kind"], j["id"])
+                       and (not quick.is_quick(e["id"]) or forced == e["id"])
+                       and {"task_kind": j["kind"], "item_category": category} in e["skills"]),
+                      key=lambda e: (e["id"] != preferred, e["id"]))
 
     def service_starts(self, j, override):
         if "start_at" in override:
@@ -379,25 +389,8 @@ class _Search:
             cursor += timedelta(minutes=5)
 
     def employee_fits(self, p, selected):
-        employee = p["employee_id"]
-        plans = sorted(chain((x for x in self.kept if x["employee_id"] == employee),
-                             (x for x in selected.values() if x["employee_id"] == employee), [p]), key=lambda x: timestamp(x["start_at"]))
-        shifts = [s for s in self.snapshot["shifts"] if s["employee_id"] == employee]
-        for row in plans:
-            matching = [s for s in shifts if timestamp(s["start_at"]) <= timestamp(row["start_at"]) and timestamp(row["end_at"]) <= timestamp(s["end_at"])]
-            if not matching or any(overlaps(interval(row["start_at"], row["end_at"]), interval(w["start"], w["end"])) for w in matching[0]["break_windows"]):
-                return False
-        for shift in shifts:
-            cursor, location = timestamp(shift["start_at"]), shift["start_location_id"]
-            for row in plans:
-                if not (timestamp(shift["start_at"]) <= timestamp(row["start_at"]) < timestamp(shift["end_at"])):
-                    continue
-                if not row["segments_json"] or not route_fits(cursor, timestamp(row["start_at"]), location, row["segments_json"][0]["from_id"], shift, self.travel):
-                    return False
-                cursor, location = timestamp(row["end_at"]), row["segments_json"][-1]["to_id"]
-            if not route_fits(cursor, timestamp(shift["end_at"]), location, shift["end_location_id"], shift, self.travel):
-                return False
-        return True
+        from .staff import fits
+        return fits(p["employee_id"], [*self.kept, *selected.values(), p], self.snapshot["shifts"], self.travel)
 
     def segment(self, kind, source, destination, start, end):
         return dict(kind=kind, from_id=source, to_id=destination, start_at=start.isoformat(), end_at=end.isoformat())
@@ -426,7 +419,7 @@ class _Search:
             j, p = jobs[jid], plans[jid]
             service = [s for s in p["segments_json"] if s["kind"] == "SERVICE"]
             if j["kind"] == "DELIVERY":
-                if jid in self.operations:
+                if jid in self.operations and self.operations[jid]["operation"] == "CREATE":
                     rid = self.operations[jid]["rental_id"]
                     if j["to_id"] not in self.customers:
                         raise ContractError(["operations.job.to_id"])

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import { api, ApiError, type PlanView, type PlanExplanationResult } from '../api'
-import { KIND_LABEL, REASON_LABEL, time } from '../format'
+import { KIND_LABEL, REASON_LABEL, time, dayLabel } from '../format'
 
 const props = defineProps<{ plan: PlanView; cancelLabel?: string }>()
 const emit = defineEmits<{
@@ -109,6 +109,16 @@ async function hold() {
       고정 규칙 계산기(AI 엔진 연동 전)로 만든 변경안입니다.
     </div>
 
+    <div v-for="(f, i) in plan.fallbacks ?? []" :key="'fallback' + i" class="banner info">
+      <strong>{{ f.kind === 'QUICK' ? '퀵 배정 제안 · 호출 필요' : '다음 근무일 회수 제안' }} · {{ f.job_id }}</strong>
+      <p v-if="f.window_start && f.due_at">
+        {{ f.old_window_start ? dayLabel(f.old_window_start) + ' ' + time(f.old_window_start) + ' → ' : '' }}
+        {{ dayLabel(f.window_start) }} {{ time(f.window_start) }}~{{ time(f.window_end) }}
+        · 완료 기한 {{ dayLabel(f.due_at) }} {{ time(f.due_at) }}
+      </p>
+      <p>{{ f.notice }}</p>
+    </div>
+
     <section class="explanation" aria-label="변경안 설명" :aria-busy="explaining">
       <div class="explanation-head">
         <div>
@@ -149,6 +159,9 @@ async function hold() {
           <span>{{ d.kind === 'PREP' ? '창고' : d.site_name }}</span>
           <small>{{ d.job_id }}</small>
         </div>
+        <p v-if="d.before?.service_start_at && d.after?.service_start_at && dayLabel(d.before.service_start_at) !== dayLabel(d.after.service_start_at)" class="reasons">
+          {{ dayLabel(d.before.service_start_at) }} → {{ dayLabel(d.after.service_start_at) }}
+        </p>
         <div class="cmp num">
           <div class="before">
             <span>{{ d.before?.employee_name ?? (d.kind === 'PREP' ? '창고' : '—') }}</span>
@@ -182,7 +195,7 @@ async function hold() {
       <button class="btn ghost" :disabled="!!busy" @click="emit('cancel')">{{ cancelLabel ?? '다시 입력' }}</button>
       <button class="btn" :disabled="!!busy || plan.status === 'HELD'" @click="hold">보류</button>
       <button class="btn confirm" :disabled="!readyToConfirm || !!busy" @click="confirm">
-        {{ busy === 'confirm' ? '확정 중…' : '이 변경안으로 확정' }}
+        {{ busy === 'confirm' ? '확정 중…' : plan.fallbacks?.length ? '대체 배정·변경 일정 확인하고 확정' : '이 변경안으로 확정' }}
       </button>
     </div>
 

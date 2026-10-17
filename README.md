@@ -38,7 +38,7 @@ cd infra && cp .env.example .env && vi .env && ./scripts/deploy.sh && ./scripts/
 
 ## A 엔진 연결 상태
 
-`ENGINE_MODE=real` 이면 GPT 해석(A) → 사람 확인 → 배정 계산(A) → 확정(B)으로 동작한다. 회수 지연은 A v2 core 를 B 가 직접 연결해 반납·준비·다음 납품(같은 모델 대체)까지 저장하고, 그 밖의 기존 작업 변경은 A v1 호환 엔진을 쓴다. 비용 장부·호출 기록·켜는 방법: [docs/AI_REAL_MODE.md](docs/AI_REAL_MODE.md), A 상세: [A 인수인계](docs/handoffs/A.md).
+`ENGINE_MODE=real` 이면 GPT 해석(A) → 사람 확인 → 배정 계산(A) → 확정(B)으로 동작한다. 회수·기존 납품 변경은 A v2 core 를 B 가 직접 연결해 반납·준비·다음 납품(같은 모델 대체)까지 저장하고, 그 밖의 기존 작업 변경은 A v1 호환 엔진을 쓴다. 비용 장부·호출 기록·켜는 방법: [docs/AI_REAL_MODE.md](docs/AI_REAL_MODE.md), A 상세: [A 인수인계](docs/handoffs/A.md).
 
 신규 단일 납품은 A의 `RealEngine(delivery_enabled=True)`에서 기존 B v1 형식으로 계산할 수 있다. 직원·동일 품목 장비를 배정하고 확정 직전에 신규 Job/PLANNED Rental/예약/준비 의존 생성분을 재검증한다. 기본 비활성이며 **B의 서버 ID·반납 정책 주입, 신규 작업 비교 표시, 확정 저장 연결이 필요하다.** [B 연결 문서](docs/handoffs/A_DELIVERY_CONNECTION.md)를 따른다. 기존 GPT 비용원장·회수 v2 경로는 유지한다.
 
@@ -51,3 +51,5 @@ cd infra && cp .env.example .env && vi .env && ./scripts/deploy.sh && ./scripts/
 ### 3건 접수·순차 처리 (TEL-062)
 
 관리자 보드의 **3건 순차 처리**에서 거래처별 원문3개를 함께 접수합니다. 첫 요청을 해석·사람확인·확정/보류하면 다음 요청을 처리하며, 계산은 매번 최신 확정 일정에서 시작합니다. 접수와 진행은 DB에 저장되어 새로고침해도 복원됩니다. 실패는 해당 순서에서 멈추며 직접 입력/명시 보류가 가능합니다. 기존 **단일 요청** 화면도 유지합니다. [API·DB 업그레이드·검증·busy-v1 한계](docs/REQUEST_QUEUE.md).
+
+내부 인력이 없는 배송 변경에는 책임자 확인용 퀵 배정, 당일 회수에는 다음 근무일 방문 제안을 계산합니다. 실제 퀵 호출은 별도이며 화면/API·저장은 연결돼 있습니다. [대안 정책·제약·검증](docs/DISPATCH_FALLBACK.md).

@@ -16,7 +16,7 @@ from pydantic import ValidationError
 from rentwise.contracts import types as c
 from rentwise.contracts.v2.schema import ContractError, timestamp
 
-from . import execution
+from . import execution, quick
 
 VERSION = 'rental-solver-b-v1-4'
 TABLES = ('locations', 'customers', 'items', 'assets', 'rentals', 'reservations',
@@ -167,6 +167,8 @@ def validate(snapshot, candidate, *, new_jobs=(), movable_jobs=(), replaceable_j
                     fail('PREP_WINDOW',jid)
                 continue
             eid=p['employee_id']
+            if not quick.allowed(eid,kind,jid):
+                fail('QUICK_RESOURCE_SCOPE',jid,eid)
             if eid not in ix['employees']:
                 fail('EMPLOYEE_REQUIRED',jid); continue
             emp=ix['employees'][eid]
@@ -422,6 +424,7 @@ def solve(inp, as_of):
                         starts.append(cursor); cursor+=timedelta(minutes=5)
             employees=sorted(ix['employees'].values(),key=lambda e:(e['id']!=p['employee_id'],e['id']))
             for emp in employees:
+                if quick.is_quick(emp['id']) and o.get('employee_id')!=emp['id']: continue
                 if 'employee_id' in o and emp['id']!=o['employee_id']: continue
                 for start in starts:
                     if examined>=inp.max_candidates or (monotonic()-started)*1000>=inp.max_search_ms:

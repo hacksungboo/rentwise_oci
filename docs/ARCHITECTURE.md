@@ -88,4 +88,10 @@ A `engine/execution.py`를 native v1/신규 납품과 B가 호출하는 v2 core�
 
 ### 3건 순차 처리 대기열 (TEL-062)
 
-`RequestQueue.vue` → ADMIN `/request-queues` → `services/request_queue.py` → 기존 requests/사람확인/plans/confirm. schema2의 `rw_request_queues`와 `rw_request_queue_items`가 접수 순서·120초 해석 lease·보류 사유를 저장하고, 기존 request.status로 선두/완료를 결정한다. 모델 대기 중 DB 연결 없음; 완료 시 선두/token/revision 재검사. 모든 기존 관련 쓰기 경로에도 FIFO를 적용하며, 다음 계산은 workspace 잠금 아래 최신 snapshot을 사용한다. 확정 저장이 롤백되면 선두도 유지된다. SQLite는 쓰기잠금 획득, Oracle은 기존 FOR UPDATE. background worker는 없고 사람 확정·보류 후 열린 화면이 다음 해석을 호출한다. 상세 및 기존 busy-v1 AS 제한: [REQUEST_QUEUE.md](REQUEST_QUEUE.md).
+`RequestQueue.vue` → ADMIN `/request-queues` → `services/request_queue.py` → 기존 requests/사람확인/plans/confirm. schema2의 `rw_request_queues`와 `rw_request_queue_items`가 접수 순서·120초 해석 lease·보류 사유를 저장하고, 기존 request.status로 선두/완료를 결정한다. 모델 대기 중 DB 연결 없음; 완료 시 선두/token/revision 재검사. 모든 기존 관련 쓰기 경로에도 FIFO를 적용하며, 다음 계산은 workspace 잠금 아래 최신 snapshot을 사용한다. 확정 저장이 롤백되면 선두도 유지된다. SQLite는 쓰기잠금 획득, Oracle은 기존 FOR UPDATE. background worker는 없고 사람 확정·보류 후 열린 화면이 다음 해석을 호출한다. 상세: [REQUEST_QUEUE.md](REQUEST_QUEUE.md).
+
+### 인력 부족 대안과 실패 미리보기 (TEL-063/064)
+
+기존 DELIVERY 변경도 v2 bridge로 연결한다. `dispatch_fallback`은 내부 인력 계획 실패와 별도 staff calendar 검사를 함께 확인한 뒤 배송별 전용 퀵 또는 당일 회수의 다음 근무일/PREP 대안을 계산한다. 독립 validator를 통과한 완전 후보만 READY가 된다. PlanView의 선택 필드 fallbacks/preview_employees로 책임자가 실제 호출 필요 여부·회수 날짜·새 기한을 검토한다. 퀵은 확정할 때 기존 employees/shifts 표에 함께 저장하며 원자 롤백/revision 보호를 유지한다. 실제 업체 가용성·호출·요금은 연결하지 않았다. 상세 [DISPATCH_FALLBACK.md](DISPATCH_FALLBACK.md).
+
+미해결 결과는 후보가 없다는 뜻이다. API는 삭제 diff를 만들지 않고 Vue는 현재 계획을 유지한다. busy-v1 TRANSFER 출발·도착 창 검증을 기존 B 변환 규칙과 일치시켰다. DB 스키마와 C 운영 seed는 변경하지 않았다.

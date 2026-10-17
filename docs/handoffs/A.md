@@ -358,3 +358,21 @@ API는 plan_id/revision/hash/base/current state와READY를 모델 전후 확인�
 - SKIPPED 실제유료모델/Oracle·클라우드·다중서버/모바일 viewport/배포. backend 별도lint/type/build·이 저장소 scripts/check.sh NOT CONFIGURED. root 기존69/bootstrap check는 별도 저장소 검증이다. commit/push/PR/배포 없음. deferred 실행 기능checkout과 다른 작업은 보존했다.
 
 TEL-062 Git 제출 승인: 사용자가 대기열 변경의 commit/push/PR을 요청했다. origin/main58b7eb5 최신 확인(추가 변경/충돌 없음), 제출 전 backend415 PASS·frontend typecheck/build39 PASS·root69/bootstrap PASS 재실행. 대기열18파일만 제출하며 deferred 실행 기능/C자료/한도 측정 보고서·캡처는 이 commit에 포함하지 않는다. B 소유 API/services/DB/FE 및 schema2/기존busy AS 한계를 PR에 명시한다. 실제유료호출/Oracle 실기동/운영배포/병합은 별도다.
+
+## TEL-063/064 — busy 미리보기 교정·인력 부족 대안 (2026-10-17, Review)
+
+사용자 확정 정책: 실제 퀵 호출 없이 배정 변경안→책임자 확인·확정, 회수는 다음 근무일 고객 방문 가능 시간. maina4081bb+미커밋TEL063을 보존한 feat/b-dispatch-fallback에서 A engine과 B services/Vue까지 연결했다. [전체 계약·무료 재현](../DISPATCH_FALLBACK.md).
+
+- v1 TRANSFER의 두 번째 SERVICE를 출발창으로 검사하던 오판을 기존 B bridge/R3 도착창 규칙으로 교정. 미해결/부분 후보의 diff를 없애고 현재 계획을 유지한다. 같은 busy AS는 기존169삭제diff→변경1/삭제0, 불가능 요청은 계속 미해결/확정 비활성이다. 이전 TEL062의 busy AS 보류 한계는 이 수정으로 대체한다.
+- 기존 DELIVERY RESCHEDULE의 PLANNED 대여/예약을 정확히 연결해 v2 계산·검증·저장. 인력 부족이 별도로 확인될 때만 전용 퀵 자원을 제안. 당일 PICKUP은 다음1~6일의 직원 근무표/고객창과 PREP/후속 납품을 함께 검증한다. 고객 약속을 유지할 수 없으면 미해결이다.
+- pending 퀵은 초안 메타데이터/별도 미리보기 행에만 존재. 확정에서 최신 HUMAN/revision/독립 검증과 함께 기존 직원/근무표 삽입·예약/대여/작업/의존·계획교체를 원자 저장한다. 퀵의 다른 작업 재사용과 수동 직원 지정 우회 금지, 실제 상태 불변. 큐는 기존 최신 계획 규칙을 사용한다.
+- 화면에서 호출 필요/실제 호출 별도, 회수 전후 날짜·새 방문창·기한, 변경 일정 확인 후 확정을 명시한다. 실제 퀵 가용성/가격은 검증하지 않으며 날짜별24시간 전용 자원은 계획 가정이다. 호출 완료 처리·실시간 직원 기록은 범위 밖이다.
+- solver 버전 v2 `rental-solver-normal-delay-v2-1`/v1 `rental-solver-b-v1-4`, 내부 정책 `dispatch-fallback-v1`. 단계별2초/1000후보/변경3건, 전체최대14단계로 합산 통계를 반환한다. HTTP 전체2초 보장 없음. AI MODEL/PROMPT/PRICE/한도/예약은 불변이고 추가 모델 호출 없다.
+
+B 후속 구현은 별도 필수가 아니다. 이 브랜치의 services/plans/v2_bridge/dispatch_fallback 및 Vue/API 응답 추가를 함께 리뷰·반영해야 한다. 공용 계약/DB schema/seed/infra는 그대로이며 실제 업체 호출 API·운영 Oracle·다중서버 인수는 후속이다. commit/push/운영배포는 이번 작업에서 수행하지 않는다.
+
+검증 근거(최종): **PASS** backend 전체456개=기존415+TEL06312+TEL06429(명시busy운영seed/FakeClient·격리SQLite,23.61s,외부anyio경고1). **PASS** frontend configured typecheck/build39modules(기존node_modules/번들Node), root `sh scripts/check.sh` bootstrap/기존A69는별도. **PASS** IAB: busy seed 사본의금요일근무종료17:30조건에서배송17:30퀵제안→확정r8→회수다음등록근무일10/17 09:20/PREP09:50→배송17:30/퀵유지·P02대체→확정r9, 운영169건/실제Asset보존. 날짜전환미리보기/확정본조회포함. 배송Fake응답근거오류는AI_SCHEMA_INVALID차단→수동입력으로진행, 회수Fake해석은정상이며실모델호출0이다. 별도회귀에서고객주말휴무→월요일/인력·방문·재고구분/자원재사용금지·초안무변경/최신큐·stale·rollback을검사한다. **SKIPPED** 실제OpenAI·업체호출/가격·운영Oracle/다중서버/모바일/배포, **NOT CONFIGURED** 실제repo rootcheck/backend별도lint/type/build. QA서버/탭/임시의존성링크정리. commit/push/PR없음.
+
+2026-10-17 사용자 로컬 커밋 승인: 앞선 미커밋 기록은 당시 상태다. 동일 구현을 TEL063 오류 수정과 TEL064 대안 기능 두 커밋으로 분리한다. push/PR/배포는 이번 승인 범위에 포함하지 않는다. 최종 통합 코드456/프런트·브라우저 검증 증거는 동일하다.
+
+TEL063은 `0aa4505`로 먼저 커밋했다. 분리한 index 사본의 backend427(16.76s, busy/FakeClient)/frontend typecheck·build39 PASS로 독립 검증했다. TEL064 원본 구현은 변경 없이 보존해 기능·문서 커밋으로 분리하며 이전 통합456 검증 결과를 유지한다.
