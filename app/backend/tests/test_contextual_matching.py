@@ -17,18 +17,22 @@ def test_busy_delivery_matching_human_confirmation_plan_and_confirm(admin, real,
     if not path:
         pytest.skip('RENTWISE_BUSY_SEED operational fixture not supplied; no gold data used')
     from rentwise.db import database
-    from rentwise.services import plans
+    from rentwise.services import plans, operations, requests
+    seed = json.loads(Path(path).read_text())
+    day = seed['manifest']['clock_anchor'][:10]
     monkeypatch.setattr(plans, 'settings', replace(plans.settings, seed_path=Path(path)))
+    monkeypatch.setattr(operations, 'settings', replace(operations.settings, seed_path=Path(path)))
     with database.get_db_engine().begin() as conn:
-        database.load_seed(conn, json.loads(Path(path).read_text()))
+        database.load_seed(conn, seed)
     payload = delay_intent()
     payload['operations'][0].update(kind='DELIVERY', target_job_id='J-B045', item_id='PR-A', asset_ids=['P10'],
-        source_customer_id=None, destination_customer_id='C-B16', window_start='2026-10-16T15:00:00+09:00',
-        window_end='2026-10-16T15:30:00+09:00', due_at=None, evidence=[
+        source_customer_id=None, destination_customer_id='C-B16', window_start=f'{day}T15:00:00+09:00',
+        window_end=f'{day}T15:30:00+09:00', due_at=None, evidence=[
             {'path': 'kind', 'quote': '프린터 설치'}, {'path': 'operation', 'quote': '당겨'},
             {'path': 'item_id', 'quote': '프린터'}, {'path': 'window_start', 'quote': TEXT}, {'path': 'window_end', 'quote': TEXT}])
     payload['needs_confirmation'] = []
     provider = real(response(payload))
+    requests.get_engine().as_of = seed['manifest']['clock_anchor']
     before = snapshot()
     created = admin.post('/api/v1/requests', json={'source_customer_id': 'C-B16', 'text': TEXT})
     assert created.status_code == 201
@@ -38,9 +42,9 @@ def test_busy_delivery_matching_human_confirmation_plan_and_confirm(admin, real,
     value = result.json()['interpretation']['payload']
     op = value['operations'][0]
     assert op['target_job_id'] == 'J-B045'
-    assert op['window_start'] == '2026-10-16T15:00:00+09:00' and op['window_end'] == '2026-10-16T15:30:00+09:00'
+    assert op['window_start'] == f'{day}T15:00:00+09:00' and op['window_end'] == f'{day}T15:30:00+09:00'
     assert '오전·오후' in next(q['question'] for q in value['needs_confirmation'] if q['path'].endswith('.window_start'))
-    op['due_at'] = '2026-10-16T16:30:00+09:00'  # Existing deadline, explicitly approved.
+    op['due_at'] = f'{day}T16:30:00+09:00'  # Existing deadline, explicitly approved.
     unreviewed = admin.put(f"/api/v1/requests/{req['id']}/interpretation", json={
         'expected_request_revision': 1, 'payload': value, 'acknowledged_paths': []})
     assert unreviewed.status_code == 200

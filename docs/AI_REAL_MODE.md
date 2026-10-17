@@ -115,7 +115,7 @@ API: 관리자 `POST /api/v1/plans/{plan_id}/explanation`, body `{expected_plan_
 
 기존 DELIVERY 변경도 v2 core로 계산한다. 내부 직원 계획부터 찾고, 별도 인력 검사에서 부족이 확인될 때만 퀵 배정 변경안/당일 회수의 다음 근무일 제안을 만든다. 실제 업체 호출·수락·결제는 별도이고 책임자 확정 전 운영 자원을 바꾸지 않는다. 장비·준비·방문창·기한은 완화하지 않는다. 단일 요청/대기열의 기존 계산·확정 API에 연결했으며 새 환경변수/모델 호출/비용 정책은 없다.
 
-버전: v2 `rental-solver-normal-delay-v2-1`, v1 `rental-solver-b-v1-5`(TEL-067 A/S 새 조건 검증), 내부 정책 `dispatch-fallback-v1`. `PROMPT_VERSION=rental-extract-v1.1`/설명 `rental-plan-explain-v1.0`/입력16000은 그대로이며, 후속 TEL-065의 모델·가격·예약은 §4를 따른다. 여러 날짜의 대안 탐색은 총 2초 보장이 아니며 단계별 제한·자원 표현·확정 계약은 [DISPATCH_FALLBACK.md](DISPATCH_FALLBACK.md)를 따른다.
+버전: v2 `rental-solver-normal-delay-v2-1`, v1 `rental-solver-b-v1-5`(TEL-067 A/S 새 조건 검증), 내부 정책 `dispatch-fallback-v1`. 해석 PROMPT는 TEL-068부터 `rental-extract-v1.2`이며 설명 `rental-plan-explain-v1.0`과 입력16000은 유지한다. 후속 TEL-065의 모델·가격·예약은 §4를 따른다. 여러 날짜의 대안 탐색은 총 2초 보장이 아니며 단계별 제한·자원 표현·확정 계약은 [DISPATCH_FALLBACK.md](DISPATCH_FALLBACK.md)를 따른다.
 
 TEL-063은 busy-v1의 TRANSFER 방문창 오판과 실패 시 전체 삭제처럼 보이던 미리보기를 수정한다. 불가능한 요청은 오류와 현재 일정으로 남으며 확정할 수 없다. seed/gold는 수정하지 않았다.
 
