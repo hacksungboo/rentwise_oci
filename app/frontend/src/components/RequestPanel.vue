@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
-import { api, ApiError, type Intent, type PlanView, type Reference, type RequestView } from '../api'
+import { api, requestError, type RequestError, type Intent, type PlanView, type Reference, type RequestView } from '../api'
 import { CONFIRM_FIELD_LABEL, KIND_LABEL, addDays, fromLocalInput, time, toLocalInput } from '../format'
 import TimeField from './TimeField.vue'
 
-const props = defineProps<{ reference: Reference; stateRevision: number; existingRequest?: RequestView; queueId?: string }>()
+const props = defineProps<{ reference: Reference; stateRevision: number; existingRequest?: RequestView; queueId?: string; interpretationError?: RequestError & { requestId: string } }>()
 const emit = defineEmits<{
   (e: 'plan', p: PlanView): void
   (e: 'busy', value: boolean): void
@@ -31,7 +31,7 @@ const custLoc = computed(() => Object.fromEntries(props.reference.customers.map(
 const origin = computed(() => req.value?.interpretation?.origin)
 
 function fail(e: unknown) {
-  error.value = e instanceof ApiError ? { message: e.message, code: e.code } : { message: '서버에 연결하지 못했습니다.', code: 'NETWORK' }
+  error.value = requestError(e)
 }
 
 function useSample(s: (typeof SAMPLES)[number]) {
@@ -49,13 +49,19 @@ watch(() => props.existingRequest, (r) => {
   unsaved.value = r.interpretation ? null : r
   draft.value = r.interpretation ? JSON.parse(JSON.stringify(r.interpretation.payload)) : null
   acked.value = new Set(r.interpretation?.acknowledged_paths ?? [])
-  error.value = null
+  const failure = props.interpretationError
+  error.value = failure?.requestId === r.id && !r.interpretation ? failure : null
+}, { immediate: true })
+watch(() => props.interpretationError, (failure) => {
+  if (failure && failure.requestId === props.existingRequest?.id && !props.existingRequest?.interpretation)
+    error.value = failure
 }, { immediate: true })
 const manualJob = ref('')
 const manualJobs = computed(() => {
   const loc = custLoc.value[customer.value]
   return props.reference.jobs.filter((j) => j.kind !== 'PREP' && (j.from_id === loc || j.to_id === loc))
 })
+const unsupportedReview = computed(() => !!props.queueId && error.value?.code === 'AI_REVIEW_UNSUPPORTED')
 const canManual = computed(() => !!unsaved.value && !!error.value && error.value.code !== 'NETWORK')
 
 async function interpret() {
@@ -239,6 +245,7 @@ async function plan() {
         <textarea v-model="text" :readonly="!!queueId" maxlength="2000" placeholder="예: 오늘 프린터 회수를 오후 2시로 미뤄 주세요" />
       </label>
       <div v-if="error" class="banner error">{{ error.message }} <small>{{ error.code }}</small></div>
+      <p v-if="unsupportedReview" class="note">현재 화면에서 확인할 수 없는 조건입니다. 같은 원문을 재해석해도 해결되지 않습니다. 기존 업무 변경은 직접 입력할 수 있고, 신규 설치는 사유를 적어 보류한 뒤 별도로 검토해 주세요.</p>
       <div v-if="canManual || (queueId && unsaved)" class="manual">
         <span>기존 작업을 골라 직접 입력</span>
         <select v-model="manualJob">
@@ -247,7 +254,7 @@ async function plan() {
         </select>
         <button class="btn small" type="button" :disabled="!manualJob" @click="startManual">직접 입력</button>
       </div>
-      <button class="btn primary wide" :disabled="!text.trim() || !!busy" @click="interpret">
+      <button class="btn primary wide" :disabled="!text.trim() || !!busy || unsupportedReview" @click="interpret">
         {{ busy === 'interpret' ? '요청을 읽는 중…' : '요청 해석하기' }}
       </button>
     </template>

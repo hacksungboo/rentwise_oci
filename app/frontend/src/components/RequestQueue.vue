@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue'
-import { api, ApiError, requestKey, type PlanView, type QueueInput, type Reference, type RequestQueue, type RequestView } from '../api'
+import { api, requestError, requestKey, type RequestError, type PlanView, type QueueInput, type Reference, type RequestQueue, type RequestView } from '../api'
 import PlanReview from './PlanReview.vue'
 import RequestPanel from './RequestPanel.vue'
 
@@ -17,6 +17,8 @@ const busy = ref(false)
 const childBusy = ref(false)
 const loaded = ref(false)
 const error = ref('')
+const interpretationError = ref<(RequestError & { requestId: string }) | null>(null)
+const stateUncertain = ref(false)
 const holdReason = ref('')
 const composing = ref(false)
 let alive = true
@@ -25,10 +27,11 @@ const current = computed(() => queue.value?.items.find((i) => i.request.id === q
 const customerName = (id: string | null) => props.reference.customers.find((c) => c.id === id)?.name ?? '거래처 미지정'
 const stateLabel: Record<string, string> = { WAITING: '대기', RECEIVED: '해석 대기', INTERPRETING: '해석 중',
   NEEDS_REVIEW: '조건 확인', READY: '계산 대기', DRAFTED: '변경안 검토', CONFIRMED: '반영 완료', HELD: '보류', CANCELLED: '취소' }
-const canSubmit = computed(() => rows.value.every((r) => r.text.trim() && r.source_customer_id))
+const canSubmit = computed(() => !stateUncertain.value && rows.value.every((r) => r.text.trim() && r.source_customer_id))
 
 function fail(e: unknown) {
-  error.value = e instanceof ApiError ? `${e.message} (${e.code})` : '서버에 연결하지 못했습니다. 새로고침해 접수 여부를 확인해 주세요.'
+  const info = requestError(e)
+  error.value = `${info.message} (${info.code})`
 }
 function preview(p: PlanView | null) {
   childBusy.value = false
@@ -50,16 +53,32 @@ async function refresh(autoInterpret = false, restorePlan = true) {
     const q = queue.value ? await api.queue(queue.value.id) : (await api.latestQueue()).queue
     if (!alive) return
     queue.value = q
+    stateUncertain.value = false
+    if (interpretationError.value?.requestId !== q?.current_request_id) interpretationError.value = null
     preview(null)
     const item = current.value
     if (q && item && autoInterpret && !item.request.interpretation && item.state !== 'INTERPRETING') {
       try {
         await api.queuedInterpret(q.id, item.request.id, item.request.revision)
       } catch (e) {
-        if (alive) fail(e) // Stop here; never automatically retry or skip a failed request.
+        if (alive) {
+          const info = requestError(e)
+          interpretationError.value = { ...info, requestId: item.request.id }
+        } // Never automatically retry a possibly billed model call.
       }
       if (!alive) return
-      queue.value = await api.queue(q.id)
+      const restored = await api.queue(q.id)
+      if (!alive) return
+      queue.value = restored
+    }
+    const failure = interpretationError.value
+    if (current.value?.request.interpretation || failure?.requestId !== current.value?.request.id) {
+      interpretationError.value = null
+    } else if (failure) {
+      // A successful GET verifies the head and absence of a stored result.
+      // The operator can now explicitly retry or use the existing manual form.
+      if (failure.code === 'NETWORK') failure.code = 'QUEUE_RESPONSE_UNCONFIRMED'
+      error.value = `${failure.message} (${failure.code})`
     }
     const saved = current.value?.request.plans?.[0]
     if (restorePlan && saved && ['READY', 'UNRESOLVED'].includes(saved.status)) {
@@ -67,7 +86,7 @@ async function refresh(autoInterpret = false, restorePlan = true) {
       if (alive) preview(p)
     }
   } catch (e) {
-    if (alive) fail(e)
+    if (alive) { stateUncertain.value = true; preview(null); fail(e) }
   } finally {
     if (alive) { busy.value = false; loaded.value = true }
   }
@@ -175,16 +194,20 @@ onUnmounted(() => { alive = false })
         <button v-if="queue.status === 'DONE'" class="btn primary" @click="newQueue">새 요청 3건 접수</button>
       </template>
       <div v-if="error" class="banner error" role="alert">{{ error }}</div>
+      <template v-if="stateUncertain">
+        <p role="status">현재 처리 상태를 확인할 수 없습니다. 저장된 결과를 확인한 뒤 계속해 주세요.</p>
+        <button class="btn" :disabled="busy" @click="refresh()">저장 상태 다시 확인</button>
+      </template>
     </section>
 
-    <template v-if="current && !composing && !busy">
+    <template v-if="current && !composing && !busy && !stateUncertain">
       <div v-if="current.state === 'INTERPRETING'" class="queue-card" role="status">
         다른 화면에서 해석 중입니다. 잠시 후 대기열을 새로고침하세요. 연결이 끊겼다면 최대 2분 후 다시 처리할 수 있습니다.
       </div>
       <template v-else>
         <PlanReview v-if="plan" :key="plan.id" :plan="plan" cancel-label="조건 수정·재계산" @confirmed="afterConfirmed" @held="afterDecision" @cancel="reviewAgain" />
         <RequestPanel v-else :key="current.request.id" :reference="reference" :state-revision="stateRevision"
-                      :existing-request="current.request" :queue-id="queue!.id" @plan="preview" @updated="updated" @busy="(v) => (childBusy = v)" />
+                      :existing-request="current.request" :queue-id="queue!.id" :interpretation-error="interpretationError ?? undefined" @plan="preview" @updated="updated" @busy="(v) => (childBusy = v)" />
         <section v-if="!plan" class="queue-card">
           <label class="field"><span>이 요청을 보류하고 다음으로</span>
             <input v-model="holdReason" maxlength="200" placeholder="예: 고객에게 방문 가능 시간 재확인 필요" :disabled="childBusy" />

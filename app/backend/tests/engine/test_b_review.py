@@ -186,7 +186,8 @@ def test_b_api_uneditable_confirmation_is_a_clear_error_with_no_interpretation_o
     with database.get_db_engine().connect() as conn:
         before = database.read_snapshot(conn)
     failed = admin.post(f'/api/v1/requests/{rid}/interpret',json={'expected_request_revision':1})
-    assert failed.status_code == 502 and failed.json()['error']['code'] == 'AI_REVIEW_UNSUPPORTED'
+    assert failed.status_code == 422 and failed.json()['error']['code'] == 'AI_REVIEW_UNSUPPORTED'
+    assert failed.json()['error']['details']['paths'] == ['operations.0.source_customer_id']
     view = admin.get(f'/api/v1/requests/{rid}').json()
     assert view['interpretation'] is None and view['plans'] == []
     with database.get_db_engine().connect() as conn:

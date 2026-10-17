@@ -121,9 +121,12 @@ def interpretation_input(conn: Connection, request_id: str, expected_request_rev
 def store_interpretation(conn: Connection, request_id: str, result) -> dict:
     if result.status != "OK" or result.payload is None:
         err = result.error
-        raise ApiError(502, (err.code if err else "AI_SCHEMA_INVALID"),
+        # Valid extraction that the review form cannot handle is a business
+        # validation failure, not an upstream outage. Keep provider errors 502.
+        status = 422 if err and err.code == "AI_REVIEW_UNSUPPORTED" else 502
+        raise ApiError(status, (err.code if err else "AI_SCHEMA_INVALID"),
                        (err.message if err else "해석 결과를 사용할 수 없습니다. 조건을 직접 입력해 주세요."),
-                       retryable=bool(err and err.retryable))
+                       details=(err.details if err else {}), retryable=bool(err and err.retryable))
     _check_ids(conn, result.payload)
     rev = _next_interp_rev(conn, request_id)
     conn.execute(insert(T.interpretations).values(

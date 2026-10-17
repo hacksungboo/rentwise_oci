@@ -92,7 +92,7 @@ A가 seed를 바꾸거나 AI가 직원 E2를 골랐다고 주장하지 않는다
 | AI_REVIEW_UNSUPPORTED | 원문은 해석됐으나 현 화면에서 고객·대여 종료일·업무 종류 등의 확인을 완료할 수 없음. 지원 조건을 원문에 명시하거나 수동 검토 |
 | AI_SCHEMA_INVALID / AI_REFUSED / AI_INCOMPLETE / AI_TIMEOUT | 유효한 해석으로 저장하지 않음. 조건 재입력·수동 검토 |
 
-AI_REVIEW_UNSUPPORTED의 상세 paths는 내부 DomainError.details에 있다. 현재 B 서비스는 details를 HTTP에 전달하지 않으므로 화면은 code/message만 사용하면 된다.
+TEL-066부터 AI_REVIEW_UNSUPPORTED는 HTTP 422 업무 검토 오류이며 상세 paths/review_version을 error.details에 전달한다. 모델/통신 오류의 HTTP 502와 구분한다. 현재 화면에서 처리할 수 없는 조건은 질문 삭제나 자동 승인 없이 명시적으로 보류·별도 검토한다.
 에러 배너 표시는 기존 코드로 된다. 다만 현재 UI에는 AI 오류 후 수동 조건 입력으로 전환하는 동선이 없으므로 **오류 시 수동 시연까지 필요하면** 이 버튼/폼은 B의 추가 작업이다. 기존 PUT interpretation API는 사용 가능하다.
 고객 선택/대여 종료일·무기한/지원하지 않는 요청 취소·재작성 등을 화면에서 직접 처리하려면 후속으로 해당 입력을 추가한다. 무기한 null을 '미확인'과 구분해 확인할 수 있어야 한다. 새 편집 항목을 추가하면 A의 `b_review.py` 허용 필드도 함께 갱신해야 한다.
 그 전에 A의 확인 질문을 제거하거나 숨은 값을 자동 승인해서 우회하지 않는다. 신규 대여/이동 자동 확정은 UI 외에 B 저장 범위 확장도 별도 필요하다.

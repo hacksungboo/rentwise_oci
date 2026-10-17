@@ -13,19 +13,48 @@ export class ApiError extends Error {
 }
 
 async function call<T>(method: string, path: string, body?: unknown, headers: Record<string, string> = {}): Promise<T> {
-  const res = await fetch(`/api/v1${path}`, {
-    method,
-    credentials: 'same-origin',
-    headers: { ...(body !== undefined ? { 'Content-Type': 'application/json' } : {}), ...headers },
-    body: body !== undefined ? JSON.stringify(body) : undefined,
-  })
-  const text = await res.text()
-  const data = text ? JSON.parse(text) : null
+  const serialized = body !== undefined ? JSON.stringify(body) : undefined
+  let res: Response
+  try {
+    res = await fetch(`/api/v1${path}`, {
+      method,
+      credentials: 'same-origin',
+      headers: { ...(body !== undefined ? { 'Content-Type': 'application/json' } : {}), ...headers },
+      body: serialized,
+    })
+  } catch {
+    throw new ApiError(0, 'NETWORK', '서버 응답을 받지 못했습니다. 처리 결과를 새로고침해 확인해 주세요.')
+  }
+  const trace = res.headers.get('X-Trace-Id') ?? undefined
+  let text: string
+  try { text = await res.text() } catch {
+    throw new ApiError(res.status, 'RESPONSE_INTERRUPTED', '서버 응답 수신이 중단되었습니다. 저장된 처리 결과를 다시 확인해 주세요.', {}, trace)
+  }
+  let data: any = null
+  try { data = text ? JSON.parse(text) : null } catch {
+    if (res.ok) throw new ApiError(res.status, 'INVALID_RESPONSE', '서버 응답 형식을 확인할 수 없습니다. 저장된 처리 결과를 다시 확인해 주세요.', {}, trace)
+    // Proxy HTML is never shown as raw content or mistaken for a fetch failure.
+  }
   if (!res.ok) {
     const e = data?.error
-    throw new ApiError(res.status, e?.code ?? 'HTTP_' + res.status, e?.message ?? '요청을 처리하지 못했습니다.', e?.details ?? {}, data?.trace_id)
+    const message = res.status === 504 || res.status === 524 ? '서버 응답 대기 시간이 초과되었습니다. 저장된 처리 결과를 다시 확인해 주세요.'
+      : res.status === 502 || res.status === 503 ? '중계 서버가 API의 정상 응답을 받지 못했습니다. 저장된 처리 결과를 다시 확인해 주세요.'
+      : '요청을 처리하지 못했습니다.'
+    throw new ApiError(res.status, typeof e?.code === 'string' ? e.code : 'HTTP_' + res.status,
+      typeof e?.message === 'string' ? e.message : message, e?.details ?? {},
+      typeof data?.trace_id === 'string' ? data.trace_id : trace)
   }
+  if (data === null && res.status !== 204 && res.status !== 205)
+    throw new ApiError(res.status, 'INVALID_RESPONSE', '서버 응답이 비어 있습니다. 저장된 처리 결과를 다시 확인해 주세요.', {}, trace)
+
   return data as T
+}
+
+export interface RequestError { message: string; code: string }
+export function requestError(e: unknown): RequestError {
+  if (!(e instanceof ApiError)) return { code: 'CLIENT_ERROR', message: '화면에서 응답을 처리하지 못했습니다. 새로고침해 저장된 결과를 확인해 주세요.' }
+  const details = [e.status ? `HTTP ${e.status}` : '', e.traceId ? `추적 ID ${e.traceId}` : ''].filter(Boolean)
+  return { code: e.code, message: e.message + (details.length ? ` (${details.join(' · ')})` : '') }
 }
 
 const key = () => (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random())
