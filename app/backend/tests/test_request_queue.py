@@ -431,3 +431,52 @@ def test_queue_requires_admin(client):
     assert client.post("/api/v1/sessions", json={"username": staff, "password": "rentwise2026"}).status_code == 200
     assert client.get("/api/v1/request-queues/latest").status_code == 403
     assert client.post("/api/v1/request-queues", json=bodies()).status_code == 403
+
+
+def test_confirm_then_unsupported_new_deliveries_hold_without_network_or_schedule_loss(admin, real):
+    """Reproduce reported 1-confirm/2-hold/3-review-blocked flow without paid AI."""
+    batch = bodies()
+    payloads = [intent(0)]
+    for index, (customer, item, name) in enumerate((("C-B", "WP-A", "정수기"), ("C-D", "PR-A", "프린터")), 1):
+        text = f"오늘 오후 4시~5시 사이에 {name} 1대 추가 설치해주세요. 반납일 미정입니다."
+        batch["items"][index] = {"source_customer_id": customer, "text": text}
+        payload = delay_intent()
+        op = payload["operations"][0]
+        op.update(operation="CREATE", kind="DELIVERY", target_job_id=None, item_id=item, asset_ids=[],
+                  quantity=1, source_customer_id=None, destination_customer_id=customer,
+                  window_start="2026-10-16T16:00:00+09:00", window_end="2026-10-16T17:00:00+09:00",
+                  due_at=None, rental_end_at=None, evidence=[
+                      {"path": "kind", "quote": "설치"}, {"path": "operation", "quote": "추가"},
+                      {"path": "item_id", "quote": name}, {"path": "quantity", "quote": "1대"},
+                      {"path": "window_start", "quote": "오늘 오후 4시~5시"},
+                      {"path": "window_end", "quote": "오늘 오후 4시~5시"}])
+        payload["needs_confirmation"] = []
+        payloads.append(payload)
+    provider = real(*(response(p) for p in payloads))
+    made = admin.post("/api/v1/request-queues", json=batch)
+    assert made.status_code == 201, made.text
+    q = made.json()
+    first = plan(admin, q, reviewed(admin, interpreted(admin, q, 0), 0))
+    confirmed = admin.post(f"/api/v1/plans/{first['id']}/confirm", json={
+        "expected_plan_revision": 1, "base_state_revision": 7})
+    assert confirmed.status_code == 200
+    protected = snapshot()
+    for index in (1, 2):
+        rid = q["items"][index]["request"]["id"]
+        failed = admin.post(f"/api/v1/request-queues/{q['id']}/interpret", json={
+            "request_id": rid, "expected_request_revision": 1})
+        code(failed, "AI_REVIEW_UNSUPPORTED", 422)
+        assert failed.json()["error"]["details"]["paths"] == ["operations.0.rental_end_at"]
+        assert not failed.json()["error"]["retryable"] and failed.json()["trace_id"]
+        restored = admin.get(f"/api/v1/request-queues/{q['id']}").json()
+        assert restored["current_request_id"] == rid and restored["state_revision"] == 8
+        request = restored["items"][index]["request"]
+        assert request["interpretation"] is None and request["plans"] == []
+        assert provider.calls == index + 1
+        assert snapshot() == protected
+        if index == 1:
+            held = admin.post(f"/api/v1/request-queues/{q['id']}/hold", json={
+                "request_id": rid, "reason": "반납일·신규 설치 별도 검토"})
+            assert held.status_code == 200
+    assert restored["items"][0]["state"] == "CONFIRMED"
+    assert restored["items"][1]["state"] == "HELD"

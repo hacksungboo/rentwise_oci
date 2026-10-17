@@ -223,3 +223,16 @@ TEL-065도 이 제출 승인에 포함된다. 최신 main3f988e3에는 PR20과 �
 
 
 TEL-065 제출 전 통합 검증(2026-10-17): 최신 origin/main3f988e3(PR20·모니터링 포함)에 rebase 충돌 없이 완료. 기능 커밋 f36eddd. 최종 통합본 backend 전체 **478 PASS**,28.36s/외부anyio deprecation1(`RENTWISE_BUSY_SEED=/absolute/path/to/seed_busy.json python -m pytest -q`, 실제 운영busy fixture/FakeClient/격리SQLite). frontend configured typecheck·build46modules/node 마크다운4 PASS, 공유root sh scripts/check.sh bootstrap/문서·기존A69 PASS(실제앱과별도), diff공백/31파일비밀값패턴 PASS. 임시 node_modules symlink 제거. 사용자 지정으로 제출 단계 브라우저 수동 확인 생략, 기존 구현 단계 화면 증거는 보존. 유료호출/운영배포/병합 없음. B 경로 소유자 리뷰·실제 모델/Oracle 인수 대기, 기존 운영env Terra 변경/API재기동은후속. 이 검증은 제출 기능 커밋과 동일한 코드에 대한 결과이며 후속 변경은 인계 문서뿐이다.
+
+
+## TEL-066 — 순차 대기열 오류 구분·복구 (In Progress)
+
+2026-10-17 · Owner Codex B · fix/b-queue-error-recovery · main5624c17. 사용자 캡처: 1확정/2보류/3해석대기에서 NETWORK 및 수동입력 비활성. 운영 근본 원인은 HTTP/서버 로그 미수신으로 미확정. 확정 결함: HTML HTTP 오류와 JSON 파싱·클라이언트 예외를 모두 NETWORK로 오분류; 자동 해석 실패를 자식 입력기에 전달하지 않아 입력 화면에 원인·후속 안내가 없음. 직접입력 버튼은 기존 작업을 선택해야 활성화되는 기존 동작이며, 캡처의 비활성만으로 수동 처리 자체가 막혔다고 단정하지 않음.
+소유 frontend api/RequestQueue/RequestPanel·무료 Node/Vue 시험·CI test실행, backend 순차 회귀시험·인계. 계획: HTTP/연결/응답형식 오류 구분·상태/trace 표시→자동해석 실패 후 GET으로 저장결과/선두 복구(추가 모델 재시도 없음)→저장결과 존재시 복원, 결과 없을 때 확인된 현재 요청에 오류 전달·수동 대체, GET도 실패하면 재조회 전 입력 차단→1확정/2보류/3오류·복구시험. 서버원인 추측성 수정/원본확정·FIFO·예산·Cseed/gold 변경 없음.
+수용: HTML502/504가 NETWORK로 숨겨지지 않음, 자동실패 뒤 성공결과는 추가POST없이 복원, 미저장오류는 선두 유지·명시재시도/기존작업 수동입력 허용, 조회실패는 복구버튼/상태불확실 표시, 선행확정·보류 보존. 자동검증 후 commit/push/PR은 사용자 기본 승인, 수동 화면·유료 호출/운영변경/병합·배포 미수행. 실제 네트워크 원인은 로그 대기 상태로 남긴다.
+
+
+TEL-066 결과 — Review(2026-10-17). 운영 제공 로그로 Terra 호출 정상/첫 회수 확정 성공, 이후 두 신규 설치는 AI_REVIEW_UNSUPPORTED임을 확인했다. 정확한 브라우저 NETWORK 예외·응답 본문은 수집하지 않았으므로 프록시 HTML을 실원인으로 단정하지 않는다. 반납 미정 신규 CREATE→현재 폼의 rental_end_at 미지원 거절은 무료 회귀로 재현했다. 지원하지 않는 검토만 HTTP422/retryable=false·paths를 반환, 기존모델오류502유지. 프런트 오류 구분/trace, 자동실패후 GET복원·미저장오류전달·저장불확실 입력차단, 같은화면의unsupported반복해석차단·보류안내. 기존 직접입력은 작업을 먼저 골라야 활성화되며 신규설치를 기존업무변경으로자동변환하지 않는다. 선행확정·FIFO/lease·예산·DBschema/공용계약·Cseed/gold불변.
+PASS 최종 backend479(27.51s,명시busy/FakeClient/SQLite,외부anyio경고1): 기존478+신규설치2건거절/보류/첫확정보존1. 관련51개도PASS. frontend configuredtypecheck/build46modules, node --test tests/*.test.mjs18개(기존Markdown4+HTTP8+실제Vue메모리renderer복구6) PASS. CI frontend에 npm test추가/새패키지없음. 공유root sh scripts/check.sh bootstrap·문서·기존A69 PASS(실제앱과별도). 초기시험보조코드/실행경로오류는수정후최종전부통과. SKIPPED 사용자지정 수동화면/실제유료모델·운영Oracle·다중서버·배포, NOT CONFIGURED 실제repo rootcheck/backend별도lint/type/build. 운영원본변경없음, 신규납품반납일/무기한확인UI·자동배정연결은별도미구현범위. 기본승인에따라commit/push/PR예정, 병합·배포없음.
+
+제출 직전 최신main03682c6(PR24)은 monitoring/alloy IPv4 probe만 바뀌었고 검증한 앱 코드와 차이가 없다. 해당 인프라 변경을 보존해 rebase하며 앱 검증 결과는 동일 코드에 적용된다.
