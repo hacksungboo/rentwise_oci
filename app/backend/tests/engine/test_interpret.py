@@ -61,7 +61,7 @@ class FakeClient:
 
 
 class FakeBudget:
-    def __init__(self, remaining=Decimal('.05')):
+    def __init__(self, remaining=Decimal('1')):
         self.remaining = remaining
         self.reservations, self.settled, self.unknown = [], [], []
 
@@ -94,7 +94,7 @@ def test_extract_uses_shared_schema_metadata_and_minimal_context():
     result, provider, ledger = run(inp=inp)
     assert result.status == 'OK', result
     assert c.InterpretationResult.model_validate_json(result.model_dump_json()) == result
-    assert result.call.origin == 'AI' and result.call.model_id == 'gpt-5.6-luna'
+    assert result.call.origin == 'AI' and result.call.model_id == 'gpt-5.6-terra'
     assert result.call.provider_call_id == 'resp-unit' and result.call.attempts == 1
     assert result.call.usage.cached_input_tokens == 100
     body, timeout = provider.calls[0]
@@ -103,7 +103,7 @@ def test_extract_uses_shared_schema_metadata_and_minimal_context():
     assert 'private_contact' not in body['input'][1]['content']
     assert body['input'][0] == {'role': 'developer', 'content': INSTRUCTIONS}
     assert ledger.settled[0][2] == PRICE_VERSION and not ledger.unknown
-    assert ledger.reservations[0][2] == Decimal('.0064')
+    assert ledger.reservations[0][2] == Decimal('.064')
     assert inp.model_dump() == before
 
 

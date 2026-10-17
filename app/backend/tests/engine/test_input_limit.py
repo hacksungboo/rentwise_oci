@@ -39,9 +39,9 @@ def test_representative_customer_lists_pass_without_trimming_context(count):
     assert sent['candidate_customers'] == before['candidate_customers']
     assert len(sent['candidate_customers']) == count
     assert inp.model_dump() == before
-    assert budget.reservations[0][2] == Decimal('.0064')
+    assert budget.reservations[0][2] == Decimal('.064')
     assert result.call.prompt_version == PROMPT_VERSION == 'rental-extract-v1.1'
-    assert budget.settled[0][2] == PRICE_VERSION == 'openai-standard-2026-10-16'
+    assert budget.settled[0][2] == PRICE_VERSION == 'openai-standard-2026-10-17-terra'
 
 
 @pytest.mark.parametrize('excess', [0, 1])
@@ -78,9 +78,9 @@ def test_reservation_covers_full_input_output_and_conservative_cache_write_cost(
     r = OpenAIInterpreter(client=provider, budget=budget).interpret(sized_input(120))
     assert r.status == 'OK', r
     reserved = budget.reservations[0][2]
-    assert reserved == Decimal('.0064')
-    expected = (Decimal(INPUT_LIMIT-cached)*Decimal('.20')*Decimal('1.25')
-        + Decimal(cached)*Decimal('.02') + Decimal(OUTPUT_LIMIT)*Decimal('1.20')) / 1_000_000
+    assert reserved == Decimal('.064')
+    expected = (Decimal(INPUT_LIMIT-cached)*Decimal('2.00')*Decimal('1.25')
+        + Decimal(cached)*Decimal('.20') + Decimal(OUTPUT_LIMIT)*Decimal('12.00')) / 1_000_000
     assert reserved >= expected
     if cached == 0:
         assert reserved == expected
@@ -91,16 +91,16 @@ def test_two_transient_attempts_reserve_each_ceiling_and_retain_unknown_cost(mon
     from rentwise.engine import interpret
     monkeypatch.setattr(interpret.time, 'sleep', lambda _: None)
     provider = FakeClient(ProviderFailure('AI_PROVIDER_ERROR', transient=True), response())
-    budget = FakeBudget(Decimal('.0128'))
+    budget = FakeBudget(Decimal('.128'))
     r = OpenAIInterpreter(client=provider, budget=budget).interpret(sized_input(120))
     assert r.status == 'OK' and r.call.attempts == 2
-    assert [row[2] for row in budget.reservations] == [Decimal('.0064')]*2
-    assert sum(row[2] for row in budget.reservations) == Decimal('.0128')
+    assert [row[2] for row in budget.reservations] == [Decimal('.064')]*2
+    assert sum(row[2] for row in budget.reservations) == Decimal('.128')
     assert len(budget.unknown) == len(budget.settled) == 1
     assert r.call.usage is None
 
 
-@pytest.mark.parametrize('remaining,expected_calls', [(Decimal('.006399'),0), (Decimal('.012799'),1)])
+@pytest.mark.parametrize('remaining,expected_calls', [(Decimal('.063999'),0), (Decimal('.127999'),1)])
 def test_budget_never_starts_an_attempt_without_its_full_reservation(remaining, expected_calls, monkeypatch):
     from rentwise.engine import interpret
     monkeypatch.setattr(interpret.time, 'sleep', lambda _: None)
@@ -109,7 +109,7 @@ def test_budget_never_starts_an_attempt_without_its_full_reservation(remaining, 
     r = OpenAIInterpreter(client=provider, budget=budget).interpret(sized_input(120))
     assert r.error.code == 'BUDGET_EXCEEDED'
     assert len(provider.calls) == len(budget.reservations) == expected_calls
-    assert all(row[2] == Decimal('.0064') for row in budget.reservations)
+    assert all(row[2] == Decimal('.064') for row in budget.reservations)
 
 
 def test_busy_seed_http_interpret_review_plan_confirm_with_real_ledger(admin, monkeypatch):
@@ -156,7 +156,7 @@ def test_busy_seed_http_interpret_review_plan_confirm_with_real_ledger(admin, mo
     assert 8000 < body_size(body) <= INPUT_LIMIT
     with database.get_db_engine().connect() as conn:
         ledger = conn.execute(select(T.ai_ledger)).mappings().one()
-        assert Decimal(str(ledger['reserved_usd'])) == Decimal('.0064')
+        assert Decimal(str(ledger['reserved_usd'])) == Decimal('.064')
         assert ledger['price_version'] == PRICE_VERSION
     early = admin.post('/api/v1/plans', json={'request_id':rid,'interpretation_revision':interp['revision'],
         'base_state_revision':seed['workspace']['state_revision']})
@@ -205,4 +205,4 @@ def test_actual_b_ledger_settlement_at_policy_maximum_does_not_exceed_reservatio
     with database.get_db_engine().connect() as conn:
         ledger = conn.execute(select(T.ai_ledger)).mappings().one()
     assert ledger['status'] == 'SETTLED' and ledger['price_version'] == PRICE_VERSION
-    assert Decimal(str(ledger['reserved_usd'])) == Decimal(str(ledger['settled_usd'])) == Decimal('.0064')
+    assert Decimal(str(ledger['reserved_usd'])) == Decimal(str(ledger['settled_usd'])) == Decimal('.064')

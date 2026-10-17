@@ -95,3 +95,11 @@ A `engine/execution.py`를 native v1/신규 납품과 B가 호출하는 v2 core�
 기존 DELIVERY 변경도 v2 bridge로 연결한다. `dispatch_fallback`은 내부 인력 계획 실패와 별도 staff calendar 검사를 함께 확인한 뒤 배송별 전용 퀵 또는 당일 회수의 다음 근무일/PREP 대안을 계산한다. 독립 validator를 통과한 완전 후보만 READY가 된다. PlanView의 선택 필드 fallbacks/preview_employees로 책임자가 실제 호출 필요 여부·회수 날짜·새 기한을 검토한다. 퀵은 확정할 때 기존 employees/shifts 표에 함께 저장하며 원자 롤백/revision 보호를 유지한다. 실제 업체 가용성·호출·요금은 연결하지 않았다. 상세 [DISPATCH_FALLBACK.md](DISPATCH_FALLBACK.md).
 
 미해결 결과는 후보가 없다는 뜻이다. API는 삭제 diff를 만들지 않고 Vue는 현재 계획을 유지한다. busy-v1 TRANSFER 출발·도착 창 검증을 기존 B 변환 규칙과 일치시켰다. DB 스키마와 C 운영 seed는 변경하지 않았다.
+
+### Terra·설명 Markdown·고객 안내 (TEL-065)
+
+`ai_policy.py`가 기본모델Terra/명시Luna 호환 가격과 모델별 정산 버전을 관리한다. 요청 해석·변경안 설명은 같은 모델 설정을 사용하고 B LedgerBudget은 전역 모델 이름 대신 호출 가격 버전으로 정산한다. 총예산/DB 스키마는 그대로다.
+
+설명은 AI의 사실ID정렬→서버 facts 렌더를 유지하면서 presentation_version/markdown을 추가하고 기존 plain 필드를 보존한다. Vue MarkdownText는 제목/목록/강조/인용만 Vue보간으로 렌더해 rawHTML·링크 실행을 하지 않는다. 표시를 위한 추가 모델 호출은 없다.
+
+확정 후 CustomerMessage가 ADMIN GET /plans/{id}/customer-message로 현재 확정 계획과 수신 고객의 직접 대상 작업을 읽는다. 짧은 workspace 잠금 아래 revision·HUMAN해석·수신 범위를 검증하고 고객 방문 SERVICE 시각으로 SYSTEM초안을 생성한다. 복사 직전 재조회하며 메시지 저장·외부발송·모델호출은 없다. 단일/큐 공통으로 최근 확정 ID를 상위 App에 전달하고 화면 수명 안에서 표시한다. 이전 계획/다른 고객 혼합은 차단, 미호출 퀵은 업체확인필요 안내다. [운영·비용](AI_REAL_MODE.md#4-비용-tel-065-terra-기본값).

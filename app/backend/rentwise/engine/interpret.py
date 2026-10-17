@@ -23,12 +23,10 @@ from uuid import uuid4
 from pydantic import ValidationError
 
 from rentwise.contracts import types as c
+from rentwise.ai_policy import DEFAULT_MODEL, PRICE_VERSION, PRICES, price_version
 from .intent_checks import check_intent, input_context
 
 PROMPT_VERSION = 'rental-extract-v1.1'
-PRICE_VERSION = 'openai-standard-2026-10-16'
-# USD per million tokens, verified against official model documentation.
-PRICES = {'gpt-5.6-luna': (Decimal('.20'), Decimal('.02'), Decimal('1.20'))}
 INPUT_LIMIT = 16000  # Full UTF-8 request bytes + framing; also the conservative token ceiling.
 INPUT_FRAMING_HEADROOM = 256
 OUTPUT_LIMIT = 2000
@@ -166,14 +164,14 @@ def _payload(response: dict) -> str:
 
 class OpenAIInterpreter:
     def __init__(self, *, client: ModelClient | None, budget: BudgetPort | None = None,
-                 model_id: str = 'gpt-5.6-luna'):
+                 model_id: str = DEFAULT_MODEL):
         self.client, self.budget, self.model_id = client, budget, model_id
 
     @classmethod
     def from_environment(cls, *, budget: BudgetPort | None = None):
         key = os.environ.get('OPENAI_API_KEY', '').strip()
         return cls(client=OpenAIResponsesClient(key) if key else None, budget=budget,
-            model_id=os.environ.get('OPENAI_MODEL', 'gpt-5.6-luna'))
+            model_id=os.environ.get('OPENAI_MODEL', DEFAULT_MODEL))
 
     def interpret(self, inp: c.InterpretationInput) -> c.InterpretationResult:
         started = time.monotonic()
@@ -240,7 +238,7 @@ class OpenAIInterpreter:
                         usage_unknown = True
                         call.usage = None
                     else:
-                        self.budget.settle(reservation, usage, PRICE_VERSION)
+                        self.budget.settle(reservation, usage, price_version(self.model_id))
                         call.usage = None if usage_unknown else usage
                 except Exception:
                     # The atomic reservation is retained; do not retry a billing failure.
