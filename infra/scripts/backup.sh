@@ -16,6 +16,12 @@ TS="$(date -u +%Y%m%dT%H%M%SZ)"
 mkdir -p backups
 F="backups/rentwise-$TS.json.gz"
 
+# 배포(CD)로 api 가 교체되는 중이면 최대 3분 기다린다 (매시간 실행이 배포 시각과 겹칠 수 있음)
+for i in $(seq 1 36); do
+  docker compose ps --status running --services 2>/dev/null | grep -qx api && break
+  [ "$i" = 1 ] && echo "$(date -Is) api 가 실행 중이 아님 → 대기"
+  sleep 5
+done
 docker compose exec -T api python -m rentwise.backup export | gzip -9 > "$F.part"
 gzip -t "$F.part"
 mv "$F.part" "$F"
