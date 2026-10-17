@@ -6,6 +6,7 @@ import { createRenderer, nextTick } from 'vue'
 const dataUrl = js => 'data:text/javascript;base64,' + Buffer.from(js).toString('base64')
 const transpile = source => ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 } }).outputText
 export const apiModuleUrl = dataUrl(transpile(await readFile(new URL('../src/api.ts', import.meta.url), 'utf8')))
+export const timingModuleUrl = dataUrl(transpile(await readFile(new URL('../src/queueTiming.ts', import.meta.url), 'utf8')))
 const formatUrl = dataUrl(transpile(await readFile(new URL('../src/format.ts', import.meta.url), 'utf8')))
 
 export async function component(name, stubs = {}) {
@@ -15,8 +16,9 @@ export async function component(name, stubs = {}) {
   js = js.replace(/from ['"]vue['"]/g, `from '${import.meta.resolve('vue')}'`)
     .replace(/from ['"]\.\.\/api['"]/g, `from '${apiModuleUrl}'`)
     .replace(/from ['"]\.\.\/format['"]/g, `from '${formatUrl}'`)
+    .replace(/from ['"]\.\.\/queueTiming['"]/g, `from '${timingModuleUrl}'`)
     .replace(/import (\w+) from ['"]\.\/(\w+)\.vue['"];?/g, (_, binding, child) => `const ${binding} = globalThis.__queueStubs['${child}'];`)
-  globalThis.__queueStubs = stubs
+  globalThis.__queueStubs = { QueueMeasurement: { render: () => null }, ...stubs }
   return (await import(dataUrl(js))).default
 }
 

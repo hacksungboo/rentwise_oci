@@ -113,3 +113,7 @@ A v1-5는 AS RESCHEDULE의 명시적인 새 방문창·완료 기한을 계산�
 ### 기존 약속의 문맥 기반 확인 초안 (TEL-068)
 
 AI 추출→intent_checks ID/근거검사→request_context 단일변경·명시기존날짜/시각·품목일치→b_review 확인용추천 순서다. 여러 작업/모호한 기존시각/다중 후보는 추론하지 않는다. 새시각의 오전/오후를 기존약속에서 추론했다면 AMBIGUOUS 질문을 유지하며 저장사실·AI 원문근거와 구분한다. B의 기존 사람확인 PUT/계획생성 ack검사를 그대로 사용한다. 화면은 실제 TimeField 컴포넌트와 추천값·체크박스·저장 payload까지 자동 회귀로 검증한다.
+
+## 3건 대기열 시간 관찰 (TEL-069)
+
+프런트 api.call의 opt-in 읽기전용 observer → QueueTiming 단조시계 구간/메타데이터 → RequestQueue 내 QueueMeasurement 표·JSON/CSV. DB/공용계약/모델호출/큐순서·원자확정 정책은 변경하지 않는다. 관찰자 오류는 업무 응답에 영향을 주지 않으며 입력 원문·비밀번호·전체 응답을 기록 파일로 내보내지 않는다. 접수~마지막 결정 응답의 AI해석/설명·계산·기타API 대기 및 잔여 사람확인추정을 서로 겹치지 않게 계산한다. 선행대기는 보조지표로만 보관, 탭숨김/응답유실·외부결정/중단은 유효 비교에서 제외한다. 서버 provider latency/실청구와 브라우저 wall-time을 구분한다. [측정 절차](QUEUE_MEASUREMENT.md), [가정 기반 원가·ROI와 재고 비전](BUSINESS_CASE.md).

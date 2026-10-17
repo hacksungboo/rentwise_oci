@@ -268,3 +268,13 @@ PASS 최종 backend508(30.60s, 기존494+문맥13+busyHTTP1), `RENTWISE_BUSY_SEE
 PASS frontend configured typecheck/build46modules/node27(기존25+실제 RequestPanel·TimeField·날짜/품목·도착고객 필터·추천클릭·체크/저장 payload2). 시작 공백이면 선행입력 안내→수동15시→현장15분 종료 추천→실제 입력 컨트롤 반영, 문맥15~15:30+기한16:30 추천과 원문 확인 저장을 검사했다. 타입 검사에서 날짜 null 처리 누락을 수정한 뒤 최종 통과했다. 실제 유료 호출/화면 수동/운영 Oracle·다중서버/배포 SKIPPED. 실제repo rootcheck/backend별도lint/type/build NOT CONFIGURED.
 
 공유 root `sh scripts/check.sh`는 FAIL 유지: 별도 측정 문서의 누락 엑셀 링크이며 다른 담당자 자료를 변경하지 않았다. 실제 앱/이 PR 문서 링크·변경 경계/비밀값/공백 검사와 분리한다. 운영 미검증과 공유 문서 문제를 완료로 숨기지 않는다. 동일 요청의 저장된 과거 해석은 자동 재과금/교체하지 않는다. 적용 후 단일 화면의 다시 입력으로 새로 해석해야 하며 원본 운영 초기화는 불필요하다. 기본 승인에 따라 commit/push/PR 제출, 병합·배포는 별도다.
+
+## TEL-069 — busy-v1 3건 순차 처리 계측 (In Progress)
+
+2026-10-17 · Owner Codex A/B · feat/a-queue-timing · main4ea904a. 소유 frontend API 관찰/계측 모듈/RequestQueue·App 메타데이터·행동시험, docs/QUEUE_MEASUREMENT.md/A 인계. 수용: 새3건접수 직전 opt-in→마지막 확정/보류 응답까지 단조시계 기록; 요청별 AI해석/설명 API대기·계산 API대기·기타API·사람확인추정/선행대기·전체를 중복없이 구분; 오류/재시도/미해결/보류·중단을 숨기지 않음; JSON/CSV 내보내기; 기존 FIFO/revision/유료호출빈도 불변. 계획: 읽기전용 API관찰→시간구간 합집합/요청결과·버전 메타데이터→측정 시작/종료/내보내기 UI→가짜시계/실제Vue·busy FIFO 무료시험→자동검증/문서/커밋·push·PR. 네트워크대기는 순수 provider/solver CPU시간이 아니며 비API시간은 주의집중시간 실측이 아님. C gold/사례·seed/DB·모델·예산은 변경하지 않음. 사용자 기본정책대로 수동브라우저·실제유료호출·배포는 수행하지 않는다.
+
+TEL-069 범위 추가: 사용자 후속 요청으로 수동5/10/15분과 플랫폼1분(미실측 가정)의 민감도, 공식 Terra단가/기존usage 로그 추산·월 비용, 현금ROI/시간가치 구분·재고최소화 비전과 후속동일수요 검증을 docs/BUSINESS_CASE.md에 기록한다. 서비스 요금/실수동·재고절감 실적을 만들어내지 않는다. 공식단가2026-10-17 재확인, 추가 유료호출없음.
+
+TEL-069 결과 — Review(2026-10-17). 최신main4ea904a 기준 frontend opt-in API관찰/단조시계 계측/표·JSON·CSV/메타데이터·오류·중단·보류 및 가정기반사업성문서 구현. DB/모델·예산/공용계약/C자료불변. 사람확인은 비API구간추정이며순수주의집중시간이아님,결정후보드재조회제외경계명시. REAL여부선택은로그대조필요,측정품질/3확정/독립정확성분리. FIFO기능·추가호출없음은 기존busy통합/실제Vue+APIwrapper 관찰로무료검증.
+PASS backend `RENTWISE_BUSY_SEED=../fixtures/v1/seed_busy.json /private/tmp/rentwise-a-engine-20261016/app/backend/.venv/bin/python -m pytest -q` **508개/29.58s**(외부anyio경고1). frontend configured script와같은node직접실행 vue-tsc --noEmit /node --test tests/*.test.mjs /vite build **PASS,38개(기존27+계측11),50modules**. 로컬npm실행파일없어 npm명령자체는실행불가였으나기존번들Node/의존성으로동일스크립트실행완료,새패키지없음. diff공백/13파일비밀값패턴/신규문서상대링크/원가·ROI산술 PASS.
+FAIL 공유root `sh scripts/check.sh`: bootstrap/문서링크는PASS, 기존A69중68PASS/1FAIL(test_seed_solver.test_representative_delay_on_all_sixteen_seed_jobs, OUT_OF_HORIZON). 이전누락엑셀링크는현재해소됨. 다른담당자날짜변경원본/기존시험을수정하지않고보존했다. 실제앱repo rootcheck/backend별도lint/type/build NOT CONFIGURED. SKIPPED 사용자지정수동브라우저/유료REAL3건·사람실측/운영Oracle·다중서버·배포/재고·현금ROI실적. 기본승인에따라commit/push/PR,병합없음.

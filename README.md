@@ -18,6 +18,8 @@
 | [docs/DB_SPLIT.md](docs/DB_SPLIT.md) | DB 를 team-4-2 로 분리, 되돌리기 |
 | [docs/TOKYO_DR.md](docs/TOKYO_DR.md) | 도쿄 리전 백업·DR (Terraform, 개인 프리티어) |
 | [docs/MONITORING.md](docs/MONITORING.md) | 모니터링: Alloy → Prometheus·Loki → Grafana, 설치·확인 |
+| [docs/QUEUE_MEASUREMENT.md](docs/QUEUE_MEASUREMENT.md) | busy-v1 3건 처리시간 계측·JSON/CSV 내보내기 |
+| [docs/BUSINESS_CASE.md](docs/BUSINESS_CASE.md) | 수동 대비 시간·API 원가·ROI 가정·재고 효율 검증 계획 |
 | [docs/AI_REAL_MODE.md](docs/AI_REAL_MODE.md) | real 모드(GPT 해석 + A 엔진) 켜기·확인·AI 호출 기록·비용 |
 | [docs/CLOUDFLARE_TUNNEL.md](docs/CLOUDFLARE_TUNNEL.md) | 도메인 연결 |
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | 구조, API, A·C 연동 지점, 명세와 다른 부분 |
