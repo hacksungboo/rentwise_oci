@@ -49,8 +49,9 @@ async function explain() {
   }
 }
 
-const changed = computed(() => props.plan.diff.filter((d) => d.changed))
-const readyToConfirm = computed(() => props.plan.status === 'READY')
+const hasCandidate = computed(() => props.plan.solver_status === 'FEASIBLE')
+const changed = computed(() => hasCandidate.value ? props.plan.diff.filter((d) => d.changed) : [])
+const readyToConfirm = computed(() => props.plan.status === 'READY' && hasCandidate.value)
 const statusBadge = computed(() => {
   switch (props.plan.status) {
     case 'READY': return { cls: 'ok', text: '실행 가능' }
@@ -98,7 +99,8 @@ async function hold() {
     <header class="row">
       <div>
         <h2>변경안 검토</h2>
-        <p>바뀌는 작업 {{ changed.length }}건 · 확정 전까지 현재 계획은 그대로입니다.</p>
+        <p v-if="hasCandidate">바뀌는 작업 {{ changed.length }}건 · 확정 전까지 현재 계획은 그대로입니다.</p>
+        <p v-else>재배치안을 찾지 못했습니다. 현재 확정 일정은 그대로 유지됩니다.</p>
       </div>
       <span class="badge" :class="statusBadge.cls">{{ statusBadge.text }}</span>
     </header>
@@ -131,7 +133,7 @@ async function hold() {
       </div>
     </section>
 
-    <ol v-if="plan.result.impact_edges?.length" class="chain">
+    <ol v-if="hasCandidate && plan.result.impact_edges?.length" class="chain">
       <li v-for="(e, i) in plan.result.impact_edges" :key="i">
         <span class="from">{{ label(e.from_job_id) }}</span>
         <span class="why">{{ REASON_LABEL[e.reason] ?? e.reason }}</span>

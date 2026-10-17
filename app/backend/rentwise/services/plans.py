@@ -142,7 +142,7 @@ def create_plan(conn: Connection, request_id: str, interpretation_revision: int,
         result_json=json.dumps(meta, ensure_ascii=False, default=str),
         operations_json=J(op_dicts), created_at=now()))
     rows = []
-    for p in result.candidate_items:
+    for p in (result.candidate_items if result.status == "FEASIBLE" else []):
         d = p.model_dump()
         d["id"], d["plan_id"] = f"PI-{pid}-{p.job_id}", pid
         rows.append(_plan_item_row(d))
@@ -205,7 +205,9 @@ def plan_view(conn: Connection, plan_id: str) -> dict:
     jobs = {r.id: row_to_dict(T.jobs, r) for r in conn.execute(select(T.jobs))}
     affected = set(meta.get("affected_job_ids", []))
     rows = []
-    for job_id in sorted(set(before) | set(after), key=lambda j: (after.get(j) or before.get(j))["start_at"]):
+    # No feasible candidate means "no proposal", never "delete the base plan".
+    compared_jobs = (set(before) | set(after)) if p.solver_status == "FEASIBLE" and after else set()
+    for job_id in sorted(compared_jobs, key=lambda j: (after.get(j) or before.get(j))["start_at"]):
         b, a = before.get(job_id), after.get(job_id)
         changed = (b is None) or (a is None) or any(
             b[k] != a[k] for k in ("employee_id", "asset_ids")) or parse(b["start_at"]) != parse(a["start_at"]) \

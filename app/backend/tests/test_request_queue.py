@@ -145,8 +145,8 @@ def test_three_real_requests_confirm_from_latest_and_preserve_predecessors(admin
     assert admin.get("/api/v1/request-queues/latest").json()["queue"] == q
 
 
-def test_busy_queue_keeps_first_confirmation_when_as_has_existing_base_violation(admin, real, monkeypatch):
-    """Do not turn busy-v1's existing v1 TRANSFER validation failure into a silent success."""
+def test_busy_queue_confirms_as_after_recovery_without_rejecting_existing_transfer(admin, real, monkeypatch):
+    """The source window belongs to the first TRANSFER stop, not the destination."""
     path = os.environ.get("RENTWISE_BUSY_SEED")
     if not path:
         pytest.skip("RENTWISE_BUSY_SEED operational fixture not supplied; no gold data used")
@@ -162,25 +162,22 @@ def test_busy_queue_keeps_first_confirmation_when_as_has_existing_base_violation
         before = snapshot()
         p = plan(admin, q, req)
         assert snapshot() == before
-        if i == 0:
-            assert p["status"] == "READY"
-            r = admin.post(f"/api/v1/plans/{p['id']}/confirm", json={"expected_plan_revision": 1, "base_state_revision": 7})
-            assert r.status_code == 200, r.text
-        else:
-            assert p["status"] == "UNRESOLVED"
-            assert any(v["code"] == "VISIT_WINDOW" and "J-TRF1" in v["job_ids"] for v in p["result"]["violations"])
-            code(admin.post(f"/api/v1/plans/{p['id']}/confirm", json={
-                "expected_plan_revision": 1, "base_state_revision": 8}), "PLAN_NOT_READY", 422)
-            assert snapshot() == before
-            assert admin.post(f"/api/v1/plans/{p['id']}/hold", json={
-                "expected_plan_revision": 1, "reason": "기존 일정 제약 수동 검토 필요"}).status_code == 200
+        assert p["status"] == "READY", p["result"]
+        assert p["base_state_revision"] == 7 + i
+        r = admin.post(f"/api/v1/plans/{p['id']}/confirm", json={
+            "expected_plan_revision": 1, "base_state_revision": 7 + i})
+        assert r.status_code == 200, r.text
         s = snapshot()
         jobs = {j["id"]: j for j in s["jobs"]}
         assert jobs["J-PICK1"]["window_start"].startswith("2026-10-16T14:00")
         assert jobs["J-DEL1"]["asset_ids"] == ["P02"]
+        old_transfer = next(p for p in before["plan_items"] if p["job_id"] == "J-TRF1")
+        transfer = next(p for p in s["plan_items"] if p["job_id"] == "J-TRF1")
+        for field in ("employee_id", "asset_ids", "start_at", "end_at", "segments"):
+            assert transfer[field] == old_transfer[field]
     q = admin.get(f"/api/v1/request-queues/{q['id']}").json()
-    assert q["status"] == "DONE" and q["state_revision"] == 8
-    assert [i["state"] for i in q["items"]] == ["CONFIRMED", "HELD", "HELD"]
+    assert q["status"] == "DONE" and q["state_revision"] == 10
+    assert [i["state"] for i in q["items"]] == ["CONFIRMED"] * 3
     assert provider.calls == 3
 
 
