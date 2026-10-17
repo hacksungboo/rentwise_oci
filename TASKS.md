@@ -197,3 +197,5 @@ SKIPPED 실제유료모델/실제퀵업체·요금/Oracle실기동·다중서버
 TEL-063/064 커밋 승인(2026-10-17): 사용자가 로컬 커밋을 요청했다. feat/b-dispatch-fallback에서 TEL063 검토 오류 수정과 TEL064 인력 부족 대안을 두 커밋으로 분리한다. 원본 작업 파일은 보존하고 index에 TEL063만 구성한 격리 사본을 검증한다. 최종 통합456/프런트typecheck·build/브라우저/rootcheck PASS 증거는 유지한다. 코드 추가 변경 없이 Git 제출 단위를 나누며 push/PR/배포는 수행하지 않는다. B 소유 services/frontend 리뷰와 실제 Oracle·업체 인수는 후속이다.
 
 분리 검증 PASS: TEL063 staged 사본에서 backend427(16.76s, busy/FakeClient)/frontend typecheck·build39 통과 후 `0aa4505 fix(web): 미해결 변경안에서 현재 일정 유지` 생성. 원본 checkout의 TEL064 구현 파일은 그대로 보존했으며 앞선 통합456/프런트·IAB 검증본과 같다. 나머지 기능·문서는 별도 feat 커밋으로 저장한다. 실제 유료 호출·원격 push/PR/배포 없음.
+
+TEL-063/064 PR 제출 승인(2026-10-17): 사용자 'pr 해줘'에 따라 로컬 두 커밋(0aa4505/c200e1d)을 origin/main 대상으로 제출한다. fetch 결과 maina4081bb가 그대로 최신이고 rebase 결과 up to date/충돌 없음. 코드 불변이므로 앞선 통합456·프런트typecheck/build·IAB 및 분리427 검증을 재사용하며 추가 유료 호출은 하지 않는다. B 소유 services/Vue 연결 리뷰·실제 업체 호출 별도·7일지평/최대14단계·Oracle 미인수를 PR 본문에 명시한다. 푸시/PR 생성만 수행하며 main 병합·운영배포는 수행하지 않는다.
