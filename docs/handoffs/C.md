@@ -14,12 +14,10 @@
 
 ## 2026-10-17 · feat/c-busy-seed-1017
 
-- 변경: `app/fixtures/v1/seed_busy.json`의 모든 날짜를 +1일 이동했다. 시연의 '오늘'을 실제 날짜 10-17(토)과 맞추기 위해서다.
-  - 기준 시각(clock_anchor) 2026-10-17T09:00:00+09:00, 계획 범위 10-17~10-24.
+- 추가: `app/fixtures/v1/seed_busy_1017.json`. busy-v1의 모든 날짜를 +1일 옮긴 판으로, 시연의 '오늘'을 실제 날짜 10-17(토)과 맞춘다.
+  - clock_anchor 2026-10-17T09:00:00+09:00, 계획 범위 10-17~10-24.
   - 바쁜 근무일 10-17, 10-20~23, 10-18(일) 근무, 10-19(월) 휴무.
-  - 날짜 외 데이터(ID·장비·직원·이동시간·업무 순서)는 그대로다. C가 기존 seed를 +1일 이동한 사본과 동일함을 확인했다.
-  - manifest sha256 `d8a716e10ad9…`, 파일 sha256 `237db68ac829…`. 이전판(ce2d9106…)과 섞어 쓰지 않는다.
-- 영향(소유자에게 따로 요청함):
-  - `RENTWISE_BUSY_SEED`를 지정해 돌리는 busy 시험 5개가 10-16 날짜를 고정해 둬서 이 seed로는 실패한다. CI에서는 건너뛴다. 요청서: C 저장소 `rental/handoffs/A_B_요청_busy날짜이동.md`.
-  - TEL-061 측정 절차서의 고정값(sha256, 기준 시각)을 다시 고정해야 한다.
-- 서버 반영: 병합·배포 뒤 '시연 초기화'를 누르면 새 seed가 들어간다(SEED_PATH는 이미 seed_busy.json).
+  - 날짜 외 데이터(ID·장비·직원·이동시간·업무 순서)는 그대로다. 기존 seed를 +1일 이동한 사본과 같음을 C가 확인했다.
+  - manifest sha256 `d8a716e10ad9…`, 파일 sha256 `237db68ac829…`.
+- 그대로 둠: `app/fixtures/v1/seed_busy.json`(10-16판, manifest sha256 `ce2d9106…`). CI가 `RENTWISE_BUSY_SEED`로 이 파일을 써서 busy 시험을 돌리므로(PR #28) 바꾸지 않는다.
+- 서버 반영: 병합·배포 뒤 team-4-1 `infra/.env`에서 `SEED_PATH=/app/fixtures/v1/seed_busy_1017.json`으로 바꾸고 `docker compose up -d api`. 그다음 '시연 초기화'.
