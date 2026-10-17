@@ -60,6 +60,7 @@ export const api = {
     call<PlanView>('POST', '/plans', { request_id, interpretation_revision, base_state_revision }),
   explainPlan: (p: PlanView) => call<PlanExplanationResult>('POST', `/plans/${p.id}/explanation`,
     { expected_plan_revision: p.revision, base_state_revision: p.base_state_revision, input_hash: p.input_hash }),
+  customerMessage: (id: string) => call<CustomerMessage>('GET', `/plans/${id}/customer-message`),
   confirm: (planId: string, expected_plan_revision: number, base_state_revision: number) =>
     call<{ confirmed_plan_id: string; new_state_revision: number }>('POST', `/plans/${planId}/confirm`,
       { expected_plan_revision, base_state_revision }, { 'Idempotency-Key': key() }),
@@ -153,7 +154,13 @@ export interface PlanView {
 export interface PlanExplanation {
   plan_id: string; plan_revision: number; base_state_revision: number; input_hash: string; evidence_hash: string
   source: 'AI' | 'SYSTEM'; paragraphs: string[]; preserved: string[]; notice: string
+  markdown?: string; presentation_version?: string
 }
 export interface PlanExplanationResult {
   status: 'OK' | 'FALLBACK'; explanation: PlanExplanation; error_code: string | null
+}
+
+export interface CustomerMessage {
+  plan_id: string; request_id: string; state_revision: number; recipient: { id: string; name: string }
+  text: string; requires_dispatch: boolean; source: 'SYSTEM'; template_version: string; notice: string
 }

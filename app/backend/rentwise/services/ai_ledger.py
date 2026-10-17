@@ -69,13 +69,12 @@ class LedgerBudget:
             return rid
 
     def settle(self, reservation_id: str, usage, price_version: str) -> None:
-        from rentwise.engine.interpret import PRICES
+        from rentwise.ai_policy import rates_for_version
         with get_db_engine().begin() as c:
             row = c.execute(select(T.ai_ledger).where(T.ai_ledger.c.id == reservation_id)).first()
             if row is None or row.status == "SETTLED":
                 return                                    # 중복 정산은 이중 차감하지 않음
-            model = settings.openai_model
-            rate_in, rate_cached, rate_out = PRICES.get(model, PRICES[next(iter(PRICES))])
+            rate_in, rate_cached, rate_out = rates_for_version(price_version)
             uncached = max(0, usage.input_tokens - usage.cached_input_tokens)
             # 캐시 쓰기 1.25배까지 보수적으로 (A 문서 기준)
             cost = (Decimal(uncached) * rate_in * Decimal("1.25") + Decimal(usage.cached_input_tokens) * rate_cached

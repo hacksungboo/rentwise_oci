@@ -129,7 +129,7 @@ def test_real_delay_end_to_end(admin, real):
     # 비용 장부·호출 기록
     ai = admin.get("/api/v1/admin/ai").json()
     assert ai["calls"] == {"ok": 1, "error": 0}
-    assert 0 < ai["settled_usd"] < 0.001 and ai["committed_usd"] == ai["settled_usd"]
+    assert 0 < ai["settled_usd"] < 0.01 and ai["committed_usd"] == ai["settled_usd"]
     assert ai["recent"][0]["status"] == "OK" and ai["recent"][0]["input_tokens"] == 900
 
 
@@ -171,9 +171,10 @@ def test_ledger_reserve_is_idempotent_and_settle_once(client):
         with pytest.raises(BudgetExceeded):
             b.reserve("k3", Decimal("0.0044"))                           # 0.0132 > 0.01
         u = Usage(input_tokens=1000, cached_input_tokens=0, output_tokens=100, reasoning_tokens=0)
-        b.settle(a1, u, "v"); b.settle(a1, u, "v")
+        from rentwise.ai_policy import PRICE_VERSION
+        b.settle(a1, u, PRICE_VERSION); b.settle(a1, u, PRICE_VERSION)
         s = ai_ledger.summary()
-        assert s["settled_usd"] == pytest.approx((1000 * 0.2 * 1.25 + 100 * 1.2) / 1e6, abs=1e-6)
+        assert s["settled_usd"] == pytest.approx((1000 * 2.0 * 1.25 + 100 * 12.0) / 1e6, abs=1e-6)
     finally:
         from rentwise.config import settings
         ai_ledger.settings = settings

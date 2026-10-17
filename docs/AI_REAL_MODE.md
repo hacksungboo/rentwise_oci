@@ -20,10 +20,10 @@ cd ~/rentwise_oci/infra
 vi .env
 #   ENGINE_MODE=real
 #   OPENAI_API_KEY=sk-...        ← 채팅·GitHub·슬라이드에 붙이지 말 것
-#   OPENAI_MODEL=gpt-5.6-luna    ← A 가 가격 정책을 등록한 모델만 허용
+#   OPENAI_MODEL=gpt-5.6-terra    ← A 가 가격 정책을 등록한 모델만 허용
 #   AI_BUDGET_USD=3              ← 누적 사용 한도. 0 이면 유료 호출 차단
 docker compose up -d api         # .env 다시 읽기 (이미지는 배포 버전 그대로)
-docker compose logs api | grep "ai:"     # ai: model=gpt-5.6-luna key=set budget_usd=3
+docker compose logs api | grep "ai:"     # ai: model=gpt-5.6-terra key=set budget_usd=3
 ```
 
 **배포 직후 한 번은 화면의 "시연 초기화"(또는 smoke)로 seed 를 다시 넣어야 합니다.** seed 를 고쳤기 때문입니다(J-AS2 담당 E2, 준비 작업 시간대, 직접 이동 예약).
@@ -32,7 +32,7 @@ docker compose logs api | grep "ai:"     # ai: model=gpt-5.6-luna key=set budget
 
 ```bash
 SMOKE_AI=0 SMOKE_PASSWORD=<admin 비번> ./scripts/smoke.sh   # AI 호출 없이 v2 계산·확정 경로 (무료)
-SMOKE_PASSWORD=<admin 비번> ./scripts/smoke.sh              # GPT 1회 포함 전체 (약 $0.001)
+SMOKE_PASSWORD=<admin 비번> ./scripts/smoke.sh              # GPT 포함 전체 (유료, 비용은 §4/응답 usage 기준)
 ```
 
 - 마지막에 `AI: mode=real model=... 호출 성공 1 / 실패 0 · 사용 $0.000x` 가 찍힙니다.
@@ -56,16 +56,17 @@ SELECT created_at, status, error_code, input_tokens, output_tokens, latency_ms F
 SELECT status, COUNT(*), SUM(NVL(settled_usd, reserved_usd)) FROM rw_ai_ledger GROUP BY status;
 ```
 
-## 4. 비용
+## 4. 비용 (TEL-065 Terra 기본값)
 
-- 기존 등록 단가 정책: `PRICE_VERSION=openai-standard-2026-10-16`, 입력 $0.20 / 캐시 $0.02 / 출력 $1.20 per 1M 토큰. 이번 변경에서 가격표를 바꾸거나 실제 청구액을 측정하지 않았습니다.
-- `INPUT_LIMIT=16000`: 지시문·응답 schema·후보 목록·원문을 포함한 요청 전체 UTF-8 바이트 수 + 고정 여유256이 16,000 이하여야 합니다. 실제 토큰 개수를 뜻하지 않습니다. 원문2000자·기존 작업15개 제한은 유지합니다. 38곳(busy-v1)·120곳 대표 입력을 시험하며, 거래처 수 자체의 무조건 허용 한도는 아닙니다.
-- `OUTPUT_LIMIT=2000`, `PROMPT_VERSION=rental-extract-v1.1` 유지. 프롬프트/응답 schema/모델/단가를 바꾸지 않았으므로 PRICE/PROMPT 버전도 유지합니다.
-- 입력 바이트 상한을 보수적 토큰 상한으로 사용하는 기존 정책에 따라, **시도당 $0.0064**를 예약합니다: `(16000 × 1.25 × $0.20 + 2000 × $1.20) / 1,000,000`. 1.25배는 기존 캐시 쓰기 여유이고 출력에는 reasoning 등 전체 output usage가 포함됩니다. 실제 토큰·비용은 응답 usage로 정산합니다. 사용량을 모르는 시도는 예약을 유지합니다.
-- 최대2시도이므로 요청당 최대 예약 $0.0128, 240회×2시도이면 $3.072입니다(모든 시도를 상한으로 예약 유지하는 계산). 이전8000 정책은 같은 기준 $2.112였습니다. $6.14/$4.22는 이 조건의 산술 결과가 아닙니다. 이 수치가 운영 예산 설정을 자동으로 늘리지는 않습니다.
-- 구조·형식 토큰이 존재하므로 이 검사는 정확한 토큰 계수가 아닌 보수적 로컬 정책입니다. [OpenAI 토큰 계수 문서](https://developers.openai.com/api/docs/guides/token-counting)와 구분하며, 이번 수정은 토큰 계수 API나 유료 모델 호출을 추가하지 않습니다.
-- `AI_BUDGET_USD=3` 이면 최악 기준으로도 수백 회. 전체 지원금($50)과 별개로 서버가 이 한도에서 멈춥니다.
-- 테스트(pytest·CI)는 모델 대역을 쓰므로 유료 호출이 없습니다. 반복 점검은 `SMOKE_AI=0`.
+- 기본 모델은 `gpt-5.6-terra`이며 해석·변경안 설명에 함께 적용합니다. 기존 `.env`에 Luna를 명시했다면 **`OPENAI_MODEL=gpt-5.6-terra`로 수정하고 API를 재기동**해야 합니다. 코드 기본값만 바꿔서는 기존 환경변수 값을 덮어쓰지 않습니다. `.env.example`과 compose 기본값은 Terra로 변경했습니다.
+- 공식 문서 확인일 2026-10-17: [Terra 모델](https://developers.openai.com/api/docs/models/gpt-5.6-terra), [표준 가격](https://developers.openai.com/api/docs/pricing). short-context 입력 $2.00 / 캐시 $0.20 / 출력 $12.00 per 1M, 캐시 쓰기 입력의1.25배. 현재 입력 상한은 short-context 범위입니다. Responses/Structured Outputs/`reasoning.effort=none`을 유지합니다. 실제 계정 사용 가능 여부·모델 응답 품질·청구는 이번 무료 시험으로 검증한 것이 아닙니다.
+- `INPUT_LIMIT=16000`: 전체 요청 UTF-8 bytes+고정여유256≤16000. 토큰 개수가 아니며 기존 보수적 상한 정책을 유지합니다. 원문2000자·기존 작업15개·38/120곳 대표 입력 회귀도 유지합니다.
+- 해석 출력2000, **예약 $0.064/시도**: `(16000×1.25×2 + 2000×12)/1e6`. 최대2시도 **$0.128/요청**, 240회×2시도 상한 예약은 **$30.72**입니다. 실제 사용량은 응답 usage로 정산하고 알 수 없으면 UNKNOWN 예약을 유지합니다.
+- 설명 출력1000, **예약 $0.052/1회**: `(16000×1.25×2 + 1000×12)/1e6`. 추가 고객 안내문은 확정 사실로 생성하는 SYSTEM 초안이라 모델 호출·비용이 없습니다.
+- Terra `PRICE_VERSION=openai-standard-2026-10-17-terra`. 명시 Luna 호환 가격/과거 `openai-standard-2026-10-16`은 유지합니다. 당시 Luna 예약은 해석$0.0064/설명$0.0052였습니다. 원장은 호출이 전달한 가격 버전으로 정산해 전역 모델 설정이 바뀌어도 다른 모델 가격을 적용하지 않습니다. 등록되지 않은 버전은 정산하지 않고 예약을 유지합니다.
+- 해석 `PROMPT_VERSION=rental-extract-v1.1`, 설명 `rental-plan-explain-v1.0`은 그대로입니다. 모델 프롬프트·응답 schema는 바꾸지 않고 설명 표시만 서버가 Markdown으로 구성합니다(`presentation_version=rental-plan-markdown-v1`).
+- `AI_BUDGET_USD` 총예산은 자동 증액하지 않습니다. 예산3달러에서 예약 상한을 모두 유지한다면 해석 시도46회까지이며, 성공 정산액이 상한보다 작으면 실제 허용 횟수는 달라집니다. 기존 미정산·불명 예약도 한도에 포함됩니다. 해커톤 총지원금과 서버 한도는 별개입니다.
+- 테스트는 FakeClient/격리 SQLite이며 실제 유료 호출0입니다. 과거 Luna 검증 예산 승인을 Terra 호출 승인으로 사용하지 않았습니다.
 
 ## 5. AI 가 실패하면
 
@@ -98,15 +99,15 @@ B 후속 검토: 후보를 보낸 거래처 + 원문 이름/약칭의 결정적 
 
 변경안 검토 상단의 **AI 설명 보기**를 누르면 변경된 시간·직원·장비, 대체 이유와 유지되는 약속을 정리합니다. 같은 화면에서 설명이 표시된 뒤에는 버튼을 다시 호출하지 않습니다. 계산·확정 권한과 제약 검사는 기존 엔진/API가 유지합니다.
 
-- 모델은 기존 `OPENAI_MODEL`/gpt-5.6-luna, 기존 `LedgerBudget`을 사용합니다. 별도 키/환경변수/DB 스키마는 없습니다. 설명 코드 배포 후 API 재기동이 필요합니다.
-- 설명용 `PROMPT_VERSION=rental-plan-explain-v1.0`, 기존 해석 프롬프트와 `PRICE_VERSION=openai-standard-2026-10-16`은 유지합니다. 전체 UTF-8 bytes+256≤16000, 출력1000, 20초·1회 시도, 자동 재시도 없음. 예약은 `(16000×1.25×0.20+1000×1.20)/1e6` = **$0.0052/설명**이며 운영 예산을 자동 증액하지 않습니다.
+- 모델은 `OPENAI_MODEL`(기본 gpt-5.6-terra), 기존 `LedgerBudget`을 사용합니다. 별도 키/환경변수/DB 스키마는 없습니다. 설명 코드 배포 후 API 재기동이 필요합니다.
+- 설명용 `PROMPT_VERSION=rental-plan-explain-v1.0` 유지. 전체 UTF-8 bytes+256≤16000, 출력1000,20초·1회 시도/자동 재시도 없음. Terra 예약은 **$0.052/설명**이며 가격 버전·계산은 §4를 따릅니다.
 - AI는 저장된 변경안으로 서버가 구성한 사실 ID를 정렬합니다. 모든 사실이 한 번씩 포함되어야 하고 모델이 만든 자유 문장·숫자·승인 판정은 표시하지 않습니다. 한국어 사실 문장은 서버가 구성합니다. 이 방식은 변경 사유·시각·담당·장비를 새로 지어내지 않고 읽는 순서를 AI가 정리하도록 합니다.
 - PREP 시작/완료는 실제 PREP segment를 사용하고, 납품 약속은 SERVICE 구간을 사용합니다. 고객 이름·직원·장비·현재 변경안 facts만 보내며 요청 원문/전체 고객목록/연락처/키는 보내지 않습니다. 이 항목들은 도구 지시로 사용하지 않습니다.
 - 키/예산 없음·시간초과·응답 오류는 **계산 결과 요약**으로 표시합니다. 확정 버튼은 기존 기준으로 유지합니다. 사용량을 모르면 예약을 UNKNOWN으로 유지하고 재호출하지 않습니다. 관리자 AI 기록에서 설명 프롬프트 버전으로 구분할 수 있습니다.
 - DB 연결을 닫은 뒤 AI를 호출하고, 호출 후 변경안 revision/input_hash/운영 상태/설명 근거를 다시 검사합니다. 그 사이 보류/확정/다른 변경이 있으면409로 설명을 버립니다. 설명 API가 작업·장비·예약·현행 계획을 변경하지 않습니다.
 - 응답은 현재 화면의 동일 변경안에만 보관합니다. 별도 서버 캐시/영속 설명 저장은 없으며 페이지를 다시 열어 요청하면 새 AI 호출입니다.
 
-API: 관리자 `POST /api/v1/plans/{plan_id}/explanation`, body `{expected_plan_revision, base_state_revision, input_hash}`. 응답 `{status: OK|FALLBACK, explanation, call, error_code}`. 설명 본문은 Vue 보간으로 표시하며 HTML을 실행하지 않습니다. [A 구현 기록](handoffs/A.md#tel-057--변경안-ai-설명-화면api).
+API: 관리자 `POST /api/v1/plans/{plan_id}/explanation`, body `{expected_plan_revision, base_state_revision, input_hash}`. 응답 `{status: OK|FALLBACK, explanation, call, error_code}`. 설명은 서버가 구성한 Markdown의 제목·목록·굵게·인용을 Vue 보간으로 표시하며 HTML/링크/이미지를 실행하지 않습니다. 기존 plain paragraphs/preserved/notice도 API 호환으로 유지합니다. [A 구현 기록](handoffs/A.md#tel-057--변경안-ai-설명-화면api).
 
 검증은 FakeClient/격리 SQLite/실제 BudgetPort와 로컬 브라우저로 수행했습니다. 실제 유료 모델 호출·운영 Oracle·배포는 별도입니다.
 
@@ -114,6 +115,12 @@ API: 관리자 `POST /api/v1/plans/{plan_id}/explanation`, body `{expected_plan_
 
 기존 DELIVERY 변경도 v2 core로 계산한다. 내부 직원 계획부터 찾고, 별도 인력 검사에서 부족이 확인될 때만 퀵 배정 변경안/당일 회수의 다음 근무일 제안을 만든다. 실제 업체 호출·수락·결제는 별도이고 책임자 확정 전 운영 자원을 바꾸지 않는다. 장비·준비·방문창·기한은 완화하지 않는다. 단일 요청/대기열의 기존 계산·확정 API에 연결했으며 새 환경변수/모델 호출/비용 정책은 없다.
 
-버전: v2 `rental-solver-normal-delay-v2-1`, v1 `rental-solver-b-v1-4`, 내부 정책 `dispatch-fallback-v1`. `PROMPT_VERSION=rental-extract-v1.1`/설명 `rental-plan-explain-v1.0`, PRICE/입력16000/예약 $0.0064는 그대로다. 여러 날짜의 대안 탐색은 총 2초 보장이 아니며 단계별 제한·자원 표현·확정 계약은 [DISPATCH_FALLBACK.md](DISPATCH_FALLBACK.md)를 따른다.
+버전: v2 `rental-solver-normal-delay-v2-1`, v1 `rental-solver-b-v1-4`, 내부 정책 `dispatch-fallback-v1`. `PROMPT_VERSION=rental-extract-v1.1`/설명 `rental-plan-explain-v1.0`/입력16000은 그대로이며, 후속 TEL-065의 모델·가격·예약은 §4를 따른다. 여러 날짜의 대안 탐색은 총 2초 보장이 아니며 단계별 제한·자원 표현·확정 계약은 [DISPATCH_FALLBACK.md](DISPATCH_FALLBACK.md)를 따른다.
 
 TEL-063은 busy-v1의 TRANSFER 방문창 오판과 실패 시 전체 삭제처럼 보이던 미리보기를 수정한다. 불가능한 요청은 오류와 현재 일정으로 남으며 확정할 수 없다. seed/gold는 수정하지 않았다.
+
+## 10. 강조 설명·고객 안내문 (TEL-065)
+
+변경안 AI 설명은 **변경 핵심 / 변경 이유 / 유지되는 약속 / 확정 전 안내**로 나누며 고객·변경 후 시간/직원/장비를 굵게 표시합니다. AI는 기존 사실 ID의 순서만 정하고 날짜·수치·문장은 서버가 생성합니다. 이름 안의 Markdown 문법/개행을 인용 처리하며 새 HTML 삽입이나 링크 실행은 허용하지 않습니다. 모델 실패 시 SYSTEM 요약도 같은 형식입니다.
+
+확정 후 단일/대기열 화면에 **고객에게 보낼 안내문**이 표시됩니다. `GET /api/v1/plans/{id}/customer-message`(ADMIN)는 짧은 workspace 잠금 안에서 현재 확정 계획·최신 HUMAN 해석·수신 고객/직접 대상 작업을 확인하고 SYSTEM 초안을 만듭니다. 다른 고객의 후속 일정/직원/장비ID/PREP 정보는 포함하지 않으며, 복사 버튼은 서버에서 최신 유효성을 다시 확인합니다. 예전/미확정/보류/수신 고객 불명·혼합 대상은 차단합니다. 고객 방문은 SERVICE 구간을 쓰고 실제 업무 완료·발송 완료를 주장하지 않습니다. 퀵미호출이면 업체 호출·수락 확인 후 최종 안내하겠다는 문구를 사용합니다. 별도 AI/과금/메시지 저장·발송 채널·새 DB스키마는 없습니다.

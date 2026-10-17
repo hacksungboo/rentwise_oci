@@ -199,3 +199,24 @@ TEL-063/064 커밋 승인(2026-10-17): 사용자가 로컬 커밋을 요청했�
 분리 검증 PASS: TEL063 staged 사본에서 backend427(16.76s, busy/FakeClient)/frontend typecheck·build39 통과 후 `0aa4505 fix(web): 미해결 변경안에서 현재 일정 유지` 생성. 원본 checkout의 TEL064 구현 파일은 그대로 보존했으며 앞선 통합456/프런트·IAB 검증본과 같다. 나머지 기능·문서는 별도 feat 커밋으로 저장한다. 실제 유료 호출·원격 push/PR/배포 없음.
 
 TEL-063/064 PR 제출 승인(2026-10-17): 사용자 'pr 해줘'에 따라 로컬 두 커밋(0aa4505/c200e1d)을 origin/main 대상으로 제출한다. fetch 결과 maina4081bb가 그대로 최신이고 rebase 결과 up to date/충돌 없음. 코드 불변이므로 앞선 통합456·프런트typecheck/build·IAB 및 분리427 검증을 재사용하며 추가 유료 호출은 하지 않는다. B 소유 services/Vue 연결 리뷰·실제 업체 호출 별도·7일지평/최대14단계·Oracle 미인수를 PR 본문에 명시한다. 푸시/PR 생성만 수행하며 main 병합·운영배포는 수행하지 않는다.
+
+## TEL-065 — Terra 모델 전환·변경안 마크다운 강조 (In Progress)
+
+Owner Codex A/B · feat/a-terra-markdown · PR20 head94b072e 기반(기능보존); 최신main759cea4의추가는모니터링이며이번대상모델/설명코드차이없음. 사용자범위: 자연어요청해석과AI변경안설명모두gpt-5.6-terra, 설명마크다운/중요값강조. 소유engine interpret/explain/compat, config, B ledger, frontend설명renderer/PlanReview/api, infra기본모델, 관련시험·문서. 기존PR20/타작업보존, commit/push/PR/배포자동수행않음.
+계획: 공식Terra모델/가격확인→기본모델·allowlist·모델별가격버전/원장정산연결(전역설정변경으로오정산금지)→기존plain설명호환을유지한서버사실기반Markdown출력(핵심/이유/유지/확정안내·중요값bold)→Vue에서제목/목록/강조/인용만안전하게렌더(HTML/link미실행·새의존성없음)→FakeClient가격·예산·양경로Terra/Markdown특수문자·stale/fallback/프런트·브라우저/전체회귀.
+검증기준: 두호출body/로그가Terra, 기존Luna명시호환,16k/출력상한동일·해석0.064/설명0.052예약과최대정산일치·총예산불변/미승인호출차단, Markdown제목·목록·굵게실표시/외부이름의문법·HTML실행금지·서버숫자보존, AI실패동일형식기본설명/기존확정기능보존. 실제유료모델·운영배포/Oracle·Cgold미수행.
+공식확인2026-10-17: https://developers.openai.com/api/docs/models/gpt-5.6-terra /api/docs/pricing, 입력2·캐시0.2·쓰기2.5·출력12USD/1M,Responses/StructuredOutputs/reasoning none지원. 현재상한모두short-context. 실제계정접근·모델품질/청구는미검증. 사용자모델변경승인은새유료시험예산승인으로확대하지않음.
+
+TEL-065 범위 추가(사용자 후속): 확정 후 고객에게 보낼 요청 수락/일정 배정 안내문 생성·조회·복사 화면/API를 함께 구현한다. 별도 모델 호출 없이 확정 사실 기반 서버 문장으로 생성해 비용/날짜 추측을 피한다. 관리자 전용/최신 확정 계획·HUMAN해석 확인, 요청 출처 고객의 직접 대상 작업만 포함·다른 고객/직원/자산ID/내부준비 제외. 미확정/stale/수신고객불명·타고객혼합은 수락 완료를 주장하지 않고 차단. 퀵미호출은 최종수락이아닌업체확인필요문구. UI는확정후단일·큐공통표시/복사직전재조회·stale차단/발송없음. 고객메시지는일정배정확정이며현장업무완료주장아님. 관련api/services/프런트·회귀소유추가.
+
+TEL-065 결과 — Review(로컬 구현·검증 완료). 기본Terra/모델별단가버전정산,서버사실Markdown·제한Vue렌더/기존plain호환,확정후SYSTEM고객안내문ADMIN API·단일/큐표시·복사전최신조회 연결. 추가패키지/DBschema/공용contracts/Cseed·gold불변,infra는모델기본값2곳만변경. 실제엔진의프롬프트/schema/출력·입력상한/총예산유지.
+PASS 최종 backend 전체477(27.58s,456+Terra/Markdown9+고객메시지12), 이후코드불변추가큐고객회귀1을포함한고객시험13 PASS(3.15s): 총478개고유시험검증. 앞선475실행이후진행/완료대상안내차단2개를추가해전체477재검증했고,큐수신자/선행안내stale1개만마지막에추가했다. 모델대역/격리SQLite/명시busyseed,외부anyiowarning1. 프런트configuredtypecheck/build46modules·신규node --test tests/markdown.test.mjs4개 PASS(기존TypeScript/Vue/번들Node,새의존성없음).
+PASS IAB 실제화면+FakeClient: 양호출modelTerra assert/해석→사람확인→Markdown핵심·이유·유지·확정안내/시각·직원·P02strong→확정r8→한빛고객14:00~14:10만의안내문→최신확인복사완료. QA DB 계획교체후재조회는stale오류/안내문·복사차단. 캡처root outputs의terra-markdown.png/customer-message.png. 모델클라이언트실호출0/실제발송0,템플릿수락은일정배정이며현장작업완료주장없음.
+SKIPPED 실제Terra접근·품질/청구·유료검증/운영Oracle·다중서버/모바일/운영배포/실제발송,compose실행(docker실행파일없음). NOT CONFIGURED 실제repo rootcheck/backend별도lint/type/build. root check는별도repo증거. 커밋/푸시/PR없음,QA서버59460/20101·탭6종료/의존성링크제거. PR20기준기능보존;최신main모니터링통합은후속Git제출시처리한다.
+
+
+## 2026-10-17 — 사용자 지정 검증·제출 정책
+
+사용자 지시: 이후 기본 검증에서 브라우저 수동 화면 확인은 생략한다. 관련 자동 테스트·타입 검사·빌드와 변경 범위/비밀값 검토를 완료하면 별도 확인 질문 없이 작업 브랜치에 커밋·푸시하고 main 대상 PR을 생성한다. 자동 검증 실패나 미검증 항목은 숨기지 않는다. 화면 확인을 별도로 요청하면 해당 요청을 따른다. 이 승인은 main 병합·운영 배포·유료 모델 호출·고객 메시지 발송을 포함하지 않는다.
+
+TEL-065도 이 제출 승인에 포함된다. 최신 main3f988e3에는 PR20과 모니터링이 병합되어 있으므로 작업을 보존한 채 최신 main으로 rebase하고 자동 회귀 검증 후 제출한다. 앞선 “commit/push/PR 없음”은 당시 상태이며 이 지시로 대체된다. B 소유 API/services/frontend/infra 경로는 PR에 명시하고 소유자 리뷰 상태를 구분한다.

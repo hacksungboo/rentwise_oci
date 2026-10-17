@@ -8,6 +8,7 @@ import json
 from typing import Callable
 
 from rentwise.contracts import types as c
+from rentwise.ai_policy import DEFAULT_MODEL
 from rentwise.contracts.v2.schema import ContractError, timestamp
 from . import v1, delivery, recovery
 from .interpret import OpenAIInterpreter
@@ -48,7 +49,7 @@ class RealEngine:
     def explain_plan(self, plan):
         from .explain import OpenAIPlanExplainer
         return OpenAIPlanExplainer(client=getattr(self.interpreter, 'client', None), budget=getattr(self.interpreter, 'budget', None),
-            model_id=getattr(self.interpreter, 'model_id', 'gpt-5.6-luna')).explain(plan)
+            model_id=getattr(self.interpreter, 'model_id', DEFAULT_MODEL)).explain(plan)
 
     def solve(self, inp: c.SolverInput) -> c.SolverResult:
         try:

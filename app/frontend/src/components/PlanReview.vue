@@ -2,6 +2,7 @@
 import { computed, ref, watch } from 'vue'
 import { api, ApiError, type PlanView, type PlanExplanationResult } from '../api'
 import { KIND_LABEL, REASON_LABEL, time, dayLabel } from '../format'
+import MarkdownText from './MarkdownText.vue'
 
 const props = defineProps<{ plan: PlanView; cancelLabel?: string }>()
 const emit = defineEmits<{
@@ -132,12 +133,15 @@ async function hold() {
       <div aria-live="polite">
         <template v-if="explanation">
           <p v-if="explanation.status === 'FALLBACK'" class="explanation-note">AI 설명을 불러오지 못해 계산 결과 요약을 표시합니다.</p>
-          <p v-for="(paragraph, i) in explanation.explanation.paragraphs" :key="'p' + i">{{ paragraph }}</p>
-          <div v-if="explanation.explanation.preserved.length" class="preserved">
-            <strong>유지되는 약속</strong>
-            <ul><li v-for="(item, i) in explanation.explanation.preserved" :key="i">{{ item }}</li></ul>
-          </div>
-          <p class="explanation-note">{{ explanation.explanation.notice }}</p>
+          <MarkdownText v-if="explanation.explanation.markdown" :text="explanation.explanation.markdown" />
+          <template v-else>
+            <p v-for="(paragraph, i) in explanation.explanation.paragraphs" :key="'p' + i">{{ paragraph }}</p>
+            <div v-if="explanation.explanation.preserved.length" class="preserved">
+              <strong>유지되는 약속</strong>
+              <ul><li v-for="(item, i) in explanation.explanation.preserved" :key="i">{{ item }}</li></ul>
+            </div>
+            <p class="explanation-note">{{ explanation.explanation.notice }}</p>
+          </template>
         </template>
         <p v-if="explanationError" class="explanation-note">{{ explanationError }}</p>
       </div>

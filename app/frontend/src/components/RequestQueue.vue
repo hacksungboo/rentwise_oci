@@ -8,6 +8,7 @@ const props = defineProps<{ reference: Reference; stateRevision: number }>()
 const emit = defineEmits<{
   (e: 'preview', value: PlanView | null): void
   (e: 'changed'): void
+  (e: 'confirmed', value: { confirmed_plan_id: string; new_state_revision: number }): void
 }>()
 const queue = ref<RequestQueue | null>(null)
 const plan = ref<PlanView | null>(null)
@@ -98,6 +99,10 @@ async function afterDecision() {
   emit('changed') // Reload board/reference from DB; next plan uses server-side current revision.
   await refresh(true)
 }
+async function afterConfirmed(result: { confirmed_plan_id: string; new_state_revision: number }) {
+  emit('confirmed', result)
+  await afterDecision()
+}
 async function hold() {
   if (!queue.value || !current.value || !holdReason.value.trim()) return
   busy.value = true
@@ -177,7 +182,7 @@ onUnmounted(() => { alive = false })
         다른 화면에서 해석 중입니다. 잠시 후 대기열을 새로고침하세요. 연결이 끊겼다면 최대 2분 후 다시 처리할 수 있습니다.
       </div>
       <template v-else>
-        <PlanReview v-if="plan" :key="plan.id" :plan="plan" cancel-label="조건 수정·재계산" @confirmed="afterDecision" @held="afterDecision" @cancel="reviewAgain" />
+        <PlanReview v-if="plan" :key="plan.id" :plan="plan" cancel-label="조건 수정·재계산" @confirmed="afterConfirmed" @held="afterDecision" @cancel="reviewAgain" />
         <RequestPanel v-else :key="current.request.id" :reference="reference" :state-revision="stateRevision"
                       :existing-request="current.request" :queue-id="queue!.id" @plan="preview" @updated="updated" @busy="(v) => (childBusy = v)" />
         <section v-if="!plan" class="queue-card">

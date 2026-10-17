@@ -51,7 +51,7 @@ services:
       DB_WAIT_SECONDS: "600"
       ENGINE_MODE: ${ENGINE_MODE:-mock}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
-      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-5.6-luna}
+      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-5.6-terra}
       AI_BUDGET_USD: ${AI_BUDGET_USD:-0}
       SESSION_SECRET: ${SESSION_SECRET:?SESSION_SECRET을 .env에 넣으세요}
       COOKIE_SECURE: ${COOKIE_SECURE:-true}

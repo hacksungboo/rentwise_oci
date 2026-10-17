@@ -64,7 +64,7 @@ def test_explanation_uses_stored_plan_records_cost_and_changes_no_operating_rows
     assert before_after()==before
     with database.get_db_engine().connect() as conn:
         row=conn.execute(select(T.ai_ledger)).mappings().one()
-        assert Decimal(str(row['reserved_usd']))==Decimal('.0052') and row['status']=='SETTLED'
+        assert Decimal(str(row['reserved_usd']))==Decimal('.052') and row['status']=='SETTLED'
         call=conn.execute(select(T.ai_calls)).mappings().one()
         assert call['prompt_version']=='rental-plan-explain-v1.0' and call['status']=='OK'
 
@@ -133,4 +133,4 @@ def test_maximum_explanation_usage_is_fully_covered_by_real_ledger_reservation(a
     assert send(admin,p).status_code==200
     with database.get_db_engine().connect() as conn:
         row=conn.execute(select(T.ai_ledger)).mappings().one()
-        assert Decimal(str(row['reserved_usd']))==Decimal(str(row['settled_usd']))==Decimal('.0052')
+        assert Decimal(str(row['reserved_usd']))==Decimal(str(row['settled_usd']))==Decimal('.052')

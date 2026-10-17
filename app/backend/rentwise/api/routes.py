@@ -295,6 +295,12 @@ def explain_plan(plan_id: str, body: ExplanationBody, _: User = Depends(require_
     return explain(plan_id, body.expected_plan_revision, body.base_state_revision, body.input_hash)
 
 
+@router.get("/plans/{plan_id}/customer-message")
+def customer_message(plan_id: str, _: User = Depends(require_admin)):
+    from rentwise.services.customer_messages import create
+    return tx(lambda c: create(c, plan_id))
+
+
 class ConfirmBody(BaseModel):
     expected_plan_revision: int
     base_state_revision: int

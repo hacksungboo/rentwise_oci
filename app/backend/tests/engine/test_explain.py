@@ -58,7 +58,7 @@ def test_explanation_states_actual_prep_start_end_and_kept_delivery_with_binding
     assert any('김현우' in line for line in r.payload['preserved'])
     assert r.payload['plan_id']==p['id'] and r.payload['input_hash']==p['input_hash']
     assert '아직 확정되지 않은' in r.payload['notice']
-    assert budget.reservations[0][2]==Decimal('.0052') and len(budget.settled)==1
+    assert budget.reservations[0][2]==Decimal('.052') and len(budget.settled)==1
     assert p==before
     assert client.calls[0]['max_output_tokens']==1000
 
@@ -107,7 +107,7 @@ def test_missing_client_budget_or_allowlist_never_calls_provider():
 
 def test_budget_concurrency_and_input_byte_bounds_block_before_model():
     client=FakeClient()
-    r=OpenAIPlanExplainer(client=client,budget=FakeBudget(Decimal('.005199'))).explain(plan())
+    r=OpenAIPlanExplainer(client=client,budget=FakeBudget(Decimal('.051999'))).explain(plan())
     assert r.error.code=='BUDGET_EXCEEDED' and not client.calls
     assert _ACTIVE_CALL.acquire(blocking=False)
     try:
@@ -141,7 +141,7 @@ def test_missing_usage_keeps_full_reservation_and_fallback():
             out=super().create(body,timeout=timeout);out.pop('usage');return out
     r,_,budget=explain(client=NoUsage())
     assert r.error.code=='AI_USAGE_MISSING' and len(budget.unknown)==1 and not budget.settled
-    assert budget.reservations[0][2]==Decimal('.0052')
+    assert budget.reservations[0][2]==Decimal('.052')
 
 
 def test_billing_failure_keeps_fallback_and_releases_the_shared_call_slot():

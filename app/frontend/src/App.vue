@@ -4,6 +4,7 @@ import { api, ApiError, type Card, type Ghost, type Lane, type Ops, type PlanVie
 import InventoryStrip from './components/InventoryStrip.vue'
 import LoginView from './components/LoginView.vue'
 import PlanReview from './components/PlanReview.vue'
+import CustomerMessage from './components/CustomerMessage.vue'
 import RequestPanel from './components/RequestPanel.vue'
 import RequestQueue from './components/RequestQueue.vue'
 import SystemPanel from './components/SystemPanel.vue'
@@ -16,6 +17,7 @@ const ops = ref<Ops | null>(null)
 const reference = ref<Reference | null>(null)
 const version = ref<VersionInfo | null>(null)
 const plan = ref<PlanView | null>(null)
+const receiptPlanId = ref<string | null>(null)
 const previewing = computed(() => !!plan.value && plan.value.status === 'READY'
   && plan.value.solver_status === 'FEASIBLE' && plan.value.base_state_revision === ops.value?.workspace.state_revision)
 const date = ref<string | undefined>(undefined)
@@ -62,6 +64,7 @@ async function logout() {
   await api.logout().catch(() => {})
   user.value = null
   plan.value = null
+  receiptPlanId.value = null
 }
 
 function say(msg: string) {
@@ -77,6 +80,7 @@ async function shiftDay(n: number) {
 }
 
 async function onConfirmed(r: { confirmed_plan_id: string; new_state_revision: number }) {
+  receiptPlanId.value = r.confirmed_plan_id
   const before = ops.value?.workspace.state_revision
   plan.value = null
   panelKey.value++
@@ -96,6 +100,7 @@ function onCancel() {
 async function resetDemo() {
   if (!confirm('시연 데이터를 처음 상태로 되돌릴까요? 확정한 변경도 모두 사라집니다.')) return
   await api.reset()
+  receiptPlanId.value = null
   plan.value = null
   panelKey.value++
   date.value = undefined
@@ -197,12 +202,13 @@ const isAdmin = computed(() => user.value?.role === 'ADMIN')
 
       <aside class="right">
         <template v-if="isAdmin">
+          <CustomerMessage v-if="receiptPlanId" :plan-id="receiptPlanId" :state-revision="ops.workspace.state_revision" @close="receiptPlanId = null" />
           <nav class="request-modes" aria-label=" 요청 접수 방식">
             <button class="btn" :class="{ primary: requestMode === 'queue' }" @click="changeMode('queue')">3건 순차 처리</button>
             <button class="btn" :class="{ primary: requestMode === 'single' }" @click="changeMode('single')">단일 요청</button>
           </nav>
           <RequestQueue v-if="requestMode === 'queue'" :key="panelKey" :reference="reference" :state-revision="ops.workspace.state_revision"
-                        @preview="(p) => (plan = p)" @changed="load" />
+                        @preview="(p) => (plan = p)" @changed="load" @confirmed="(r) => (receiptPlanId = r.confirmed_plan_id)" />
           <template v-else>
             <PlanReview v-if="plan" :plan="plan" @confirmed="onConfirmed" @held="onHeld" @cancel="onCancel" />
             <RequestPanel v-else :key="panelKey" :reference="reference" :state-revision="ops.workspace.state_revision" @plan="(p) => (plan = p)" />
